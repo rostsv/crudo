@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Cross-model consistency gate. Keeps every agent/model's output uniform.
+# Enable once:  git config core.hooksPath .githooks
+set -euo pipefail
+
+echo "pre-commit · dart format check"
+dart format --output=none --set-exit-if-changed .
+
+if [ -f .dart_tool/package_config.json ]; then
+  echo "pre-commit · flutter analyze"
+  flutter analyze
+else
+  echo "pre-commit · skipping analyze (run 'flutter pub get' first)"
+fi
+
+# Tests run in CI / pre-push (too slow for every commit).

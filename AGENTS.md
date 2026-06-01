@@ -1,27 +1,45 @@
-# CLAUDE.md
+# Crudo — Agent Guide
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Single source of truth for **every agent and model** working in this repo — Claude Code, and opencode models that load it via `instructions: ["./AGENTS.md"]`. Tool-agnostic. `CLAUDE.md` points here.
+
+## Roles & orchestration
+
+- **Architect / orchestrator — Claude Opus (Claude Code).** Owns architecture decisions, the specs (`AGENTS.md`, `docs/`), task breakdown, and review/integration. Any change to conventions, the domain model, the design system, or dependencies originates here.
+- **Implementation models (opencode):**
+  - **ui** (`design_ui`) — screens & widgets, pixel-matching the prototype.
+  - **implement** (`heavy_coder`) — feature logic: controllers, repositories, services, models, tests.
+  - **build** (`workhorse`) — routine/bulk work: boilerplate, codegen runs, test fill-in, fixups.
+  - **review** (optional) — read-only critic of diffs against this guide + the relevant skill.
+- **Worker contract:** follow this file **and** the matching skill; stay in your lane; produce small, focused diffs. Do **not** change architecture, design-system, or dependency decisions — if something here is wrong, missing, or blocks you, **stop and escalate to the architect** rather than improvising. Meet the Definition of Done before declaring a task complete.
+
+## Definition of done (every change)
+
+1. `dart format .` leaves nothing to change.
+2. `flutter analyze` is clean.
+3. `flutter test` is green (add/adjust tests for what you changed).
+4. Follows the relevant skill(s) and the locked decisions below.
+5. UI matches `docs/design/prototype/app.css` exactly (tokens, radii, spacing).
+
+A pre-commit hook enforces (1)–(2): `.githooks/pre-commit`. Enable once with `git config core.hooksPath .githooks`. Tests/build belong in CI or a pre-push hook.
 
 ## Project status
 
-Crudo is a Flutter app in the **specification-complete, pre-implementation** stage. `lib/main.dart` is still the default Flutter counter template — no product code exists yet. Everything is defined across **three canonical docs** in `docs/`; read the relevant one before implementing any feature:
+Crudo is a Flutter app in **early implementation**. `lib/main.dart` is a minimal `CrudoApp` placeholder; the product, design, and architecture are fully specified in `docs/`. Read the relevant doc before implementing a feature:
 
-- `docs/product.md` — product definition, MVP scope (in vs. out), onboarding flow, screen-by-screen features, and product decisions (marking, snooze, streak, paywall).
+- `docs/product.md` — product definition, MVP scope (in vs. out), onboarding flow, screen-by-screen features, product decisions (marking, snooze, streak, paywall).
 - `docs/design_system.md` — visual language: color tokens (incl. gold), typography, elevation, spacing, components, navigation, motion, do's/don'ts.
-- `docs/architecture.md` — tech stack, domain/data model, nutrition calc, app state & navigation map, snapshots/scheduling/notifications, and open **(decision pending)** items.
+- `docs/architecture.md` — tech stack, domain/data model, nutrition calc, app state & navigation map, snapshots/scheduling/notifications, the skill catalog (§12), and open **(decision pending)** items.
 - `docs/design/mock/onboarding/` — PNG mockups for onboarding screens.
 
 ### Design prototype (the pixel-perfect target)
 
-`docs/design/prototype/` is an exported React/HTML prototype from Claude Design covering **every** main screen. It is the **canonical visual + interaction reference** — recreate it in Flutter, matching the visual output (don't port the JSX structure). Key files:
+`docs/design/prototype/` is an exported React/HTML prototype covering **every** main screen. It is the **canonical visual + interaction reference** — recreate it in Flutter, matching the visual output (don't port the JSX structure). Key files:
 
-- `app.css` — the locked design tokens (exact hex, radii, type scale, shadows). Treat this as the source of truth for styling values; it is more precise than `design_system.md`.
+- `app.css` — locked design tokens (exact hex, radii, type scale, shadows). More precise than `design_system.md` for values.
 - `screens/today.jsx`, `meal.jsx`, `other.jsx` (Plans/Plan detail/History/Profile), `plan-create.jsx`, `sheets.jsx` (all popups), `onboarding.jsx` (13-screen flow).
-- `app.jsx` — app shell, routing between screens/sheets, and the seed data model (foods, meals, plans, prefs) — a concrete reference for the domain types.
-- `design-chat.md` — the full design conversation; shows **why** decisions were made and where things landed after teammate review.
-- `HANDOFF-README.md` — the original handoff instructions from Claude Design.
-
-`onboarding-figma.jsx` and `tweaks-panel.jsx` are alternate/abandoned artifacts — ignore unless told otherwise.
+- `app.jsx` — app shell, routing between screens/sheets, and the seed data model (foods, meals, plans, prefs) — concrete reference for the domain types.
+- `design-chat.md` — the design conversation (the *why* behind decisions).
+- `onboarding-figma.jsx` and `tweaks-panel.jsx` are abandoned artifacts — ignore unless told otherwise.
 
 ## Commands
 
@@ -29,28 +47,25 @@ Crudo is a Flutter app in the **specification-complete, pre-implementation** sta
 flutter pub get                       # install dependencies
 flutter run                           # run on connected device/simulator
 flutter run -d ios|chrome|<device>    # target a specific device
-flutter analyze                       # lint / static analysis (uses analysis_options.yaml)
+flutter analyze                       # lint / static analysis (analysis_options.yaml)
 flutter test                          # run all tests
 flutter test test/widget_test.dart    # run a single test file
 flutter test --name "<substring>"     # run tests matching a name
 dart format .                         # format code
+dart run build_runner build --delete-conflicting-outputs   # codegen (freezed / riverpod / mockito)
 ```
 
-Environment: Dart SDK `^3.11.5`. Only `cupertino_icons` is a runtime dependency so far; lints come from `flutter_lints`.
+Environment: Dart SDK `^3.11.5`. Lints from `flutter_lints`.
 
-## Project skills — use them
+## Skills — use them
 
-`.agents/skills/` holds the Dart/Flutter agent skills that define this repo's conventions and tooling. These are **markdown instruction files, not harness-registered slash commands** — Claude Code does not auto-surface `.agents/skills/` (only `.claude/skills/`), so **this CLAUDE.md is the bridge**: it's loaded every session and lists the catalog, which is how skills stay discoverable.
+`.agents/skills/` holds Dart/Flutter skills that define this repo's conventions and tooling. **No agent or model auto-loads them** (not Claude Code, not opencode) — this guide is the bridge. For any task:
 
-### How I use skills each session
-
-1. **Match.** At the start of a task, map it to a skill using the catalog in `architecture.md` §12 (e.g. writing a screen → architecture + widget-test + widget-preview; adding navigation → declarative-routing).
-2. **Read before doing.** Open that `SKILL.md` in full and follow its workflow/checklist — don't work from memory.
-3. **Apply the overlay.** `flutter-expert` is **always on** for Flutter work: const constructors, strategic keys, Dart 3 null-safety, accessibility/semantics, error + loading states, performance. Apply its traits on top of the specific task skill.
-4. **Respect precedence.** If `flutter-expert`'s generic options conflict with a locked decision below or a specific task skill, the **project decision / task skill wins** (e.g. state mgmt = **Riverpod 3.x**, layout = layer-first MVVM — not Bloc/GetX/Clean-Architecture, even though `flutter-expert` lists them).
-5. **Combine when needed.** Multiple skills can apply to one task — read all relevant ones first.
-
-If you'd rather the harness auto-surface these (so they appear as `/`-invocable skills and in session reminders without relying on CLAUDE.md), I can mirror them into `.claude/skills/` — ask and I'll set it up.
+1. **Match** the task to a skill using the catalog in `architecture.md §12` (e.g. a screen → architecture + widget-test + widget-preview; navigation → declarative-routing; state → riverpod-arch).
+2. **Read** that `SKILL.md` in full and follow its workflow before working — don't work from memory.
+3. **Overlay:** `flutter-expert` is **always on** for Flutter work — const constructors, strategic keys, Dart 3 null-safety, accessibility/semantics, error + loading states, performance.
+4. **Precedence:** locked decisions below and the specific task skill **win** over `flutter-expert`'s generic menu (e.g. state management is **Riverpod 3.x**, layout is **layer-first MVVM** — not Bloc/GetX/Clean-Architecture).
+5. **Combine** when a task spans several skills — read all relevant ones first.
 
 ### Decisions the skills lock in
 
@@ -63,7 +78,7 @@ If you'd rather the harness auto-surface these (so they appear as `/`-invocable 
 
 ## Project structure
 
-`lib/` follows the `flutter-apply-architecture-best-practices` skill — MVVM, hybrid layout (UI grouped by feature, data/domain grouped by type). Scaffolded as empty `.gitkeep` placeholders; `architecture.md` §2 has the full tree.
+`lib/` follows the `flutter-apply-architecture-best-practices` skill — MVVM, hybrid layout (UI grouped by feature, data/domain grouped by type). `architecture.md §2` has the full tree.
 
 - **`ui/features/<feature>/`** → `views/` (`ConsumerWidget` screens, UI-only logic) + `view_models/` (Riverpod controllers + providers). Shared widgets/themes in `ui/core/{widgets,themes}/`. Features: onboarding, auth, today, meals, plans, history, profile, paywall.
 - **`domain/models/`** → clean immutable (freezed) models + enums.
@@ -82,7 +97,7 @@ Full types and rules are in `docs/architecture.md`. The hierarchy:
 
 Behavioral invariants that are easy to get wrong:
 
-- **Meal marking is ingredient-level yes/no**, not gram-level. The per-ingredient checklist auto-derives done/partial/skip (5/5 = done, 1–4/5 = partial, 0/5 = skip).
+- **Meal marking is ingredient-level yes/no**, not gram-level. The per-ingredient checklist auto-derives done/partial/skip (all = done, some = partial, none = skip).
 - **Streak is binary**: Green (≥80% meals done) or Red (resets). Yellow/partial-day is a parked post-MVP idea.
 - **Plans are templates** — edits affect future days only, never today or history. Today's logged/skipped meals are locked. Upcoming-today meals can be edited or swapped.
 - **Snapshot on schedule/log** — when a meal is scheduled or logged its data is snapshotted, so later library edits/deletions never alter past days or history.
@@ -126,3 +141,19 @@ Radii: `sm .75rem`, `md 1.25rem`, `lg 2rem`, `xl 3rem`, `full 9999px`.
 - **Sheets/popups**: Snooze, Swap, Reminders, Paywall, Streak risk, Confirm, Review, Calendar (per-day stats), Plan-days editor, Schedule conflict, Toast.
 
 See `architecture.md` for the behavioral rules these screens encode (plan-edit location, conflict/override validation, calendar stats, notification placement, app state & navigation map).
+
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+
+Rules:
+- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
+- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
+- Pattern: [thing] [action] [reason]. [next step].
+- Not: "Sure! I'd be happy to help you with that."
+- Yes: "Bug in auth middleware. Fix:"
+
+Switch level: /caveman lite|full|ultra|wenyan
+Stop: "stop caveman" or "normal mode"
+
+Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
+
+Boundaries: code/commits/PRs written normal.

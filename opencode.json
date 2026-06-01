@@ -1,0 +1,50 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": {
+    "workhorse":  "opencode-go/deepseek-v4-flash",
+    "heavy_coder": "opencode-go/minimax-m2.7",
+    "design_ui":  "opencode-go/kimi-k2.5"
+  },
+
+  "instructions": ["./AGENTS.md"],
+
+  "permission": {
+    "edit": "allow",
+    "webfetch": "allow",
+    "bash": {
+      "*": "allow",
+      "git push*": "ask",
+      "npm *": "ask",
+      "pnpm *": "ask",
+      "npx *": "ask",
+      "rm *": "deny",
+      "rmdir *": "deny",
+      "sudo *": "deny",
+      "git push --force*": "deny",
+      "git push -f*": "deny",
+      "cat *.env*": "deny",
+      "cp *.env*": "deny"
+    }
+  },
+
+  "agent": {
+    "ui": {
+      "model": "design_ui",
+      "instructions": ["./AGENTS.md", "./.opencode/roles/ui.md"]
+    },
+    "implement": {
+      "model": "heavy_coder",
+      "instructions": ["./AGENTS.md", "./.opencode/roles/implement.md"]
+    },
+    "build": {
+      "model": "workhorse",
+      "instructions": ["./AGENTS.md", "./.opencode/roles/build.md"]
+    },
+    "review": {
+      "model": "heavy_coder",
+      "mode": "subagent",
+      "permission": { "edit": "deny" },
+      "instructions": ["./AGENTS.md", "./.opencode/roles/review.md"]
+    }
+  }
+}

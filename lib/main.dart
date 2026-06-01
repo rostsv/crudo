@@ -14,9 +14,7 @@ class CrudoApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF004D49)),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(child: Text('Crudo')),
-      ),
+      home: const Scaffold(body: Center(child: Text('Crudo'))),
     );
   }
 }

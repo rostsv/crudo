@@ -63,10 +63,13 @@ Tasks cross the Opus↔opencode boundary as **files**. One task goes fully throu
 
 ## When to run the review worker
 
-The `review` worker (Qwen 3.7 Max, read-only, `.opencode/roles/review.md`) is a **selective second opinion, not a default gate** — Opus reviews every diff, and the pre-commit hook + tests catch mechanical issues. Don't run it blindly.
+The `review` worker (Nemotron-3-super — **free**, read-only, `.opencode/roles/review.md`) is independent of the kimi implementer (different family → catches more). Opus reviews every diff regardless; the pre-commit hook + tests catch mechanical issues.
 
-- **Skip** for: boilerplate · scaffolding · theme tokens · formatting · trivial diffs.
-- **Run** for: domain logic (adherence/streak, snapshots, day-assignment, meal-marking) · auth/security · a whole-feature merge.
+- Because it's free, **run it liberally on any non-trivial diff** — not just risky ones.
+- **Skip** only pure-trivial: boilerplate · scaffolding · theme tokens · formatting.
+- **Always run** for: domain logic (adherence/streak, snapshots, day-assignment, meal-marking) · auth/security · a whole-feature merge.
+
+**Sequence:** `implement` (kimi) finishes the plan → runs `@review` (nemotron) on the whole diff as its **last step** → fixes any `BLOCK` → reports. Then **Opus** does the final review + integrate (commit). Review is the last *worker* step; Opus is the last word.
 - **Strict scope** (enforced by the role file): it reviews **only the given diff** vs its spec/skill/invariants; flags only correctness / spec / invariant / security issues; never refactors, re-architects, or raises lint the hook already covers. Output = `PASS` or a bounded `BLOCK` list. Feed it just `git diff` + the spec slice + the named skill — never the whole repo.
 
 ## caveman fit

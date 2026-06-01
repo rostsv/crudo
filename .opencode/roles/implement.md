@@ -9,6 +9,8 @@ Feature logic: controllers, repositories, services, domain models, and their tes
 - Write unit tests for every controller (`ProviderContainer`, override repo providers with fakes/mocks) and repository. Assertions via `package:checks`.
 - Match the domain model + invariants in `AGENTS.md` / `docs/architecture.md` exactly (marking, streak, snapshots, day-assignment). Meet the Definition of Done.
 - Do not change architecture decisions or design tokens — escalate to the architect.
+- **Delegate pure boilerplate** (codegen runs, scaffolding, mechanical fixups) to the `@build` subagent — it's the cheap model. Keep the logic/design work yourself.
+- **Escalate when stuck** — complex cross-cutting logic, or tests still red after ~2 attempts → hand off to `@escalate` (top model).
 
 ## Integration — do NOT commit
-Do not `git commit` or `git push`. Leave your changes in the working tree for Opus to review and integrate. Before reporting done, run **`dart format .`** → `flutter analyze` → `flutter test`; all must be clean/green. (opencode does not run the git pre-commit hook, so formatting is on you; Opus makes the commit after review.)
+Do not `git commit` or `git push`. Leave your changes in the working tree for Opus to review and integrate. Before reporting done: run **`dart format .`** → `flutter analyze` → `flutter test` (all green), then **invoke `@review` on your diff and fix any `BLOCK` findings**. Only then report. (opencode does not run the git pre-commit hook, so formatting is on you; Opus makes the final review + commit.)

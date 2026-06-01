@@ -8,8 +8,16 @@
   },
 
   "agent": {
+    "plan": {
+      "model": "opencode-go/qwen3.7-max",
+      "instructions": [
+        "./AGENTS.md",
+        "./docs/workflow.md"
+      ]
+    },
+
     "ui": {
-      "model": "opencode-go/kimi-k2.5",
+      "model": "opencode-go/kimi-k2.6",
       "instructions": [
         "./AGENTS.md",
         "./.opencode/roles/ui.md"
@@ -17,7 +25,7 @@
     },
 
     "implement": {
-      "model": "opencode-go/minimax-m2.7",
+      "model": "opencode-go/kimi-k2.6",
       "instructions": [
         "./AGENTS.md",
         "./.opencode/roles/implement.md"
@@ -26,6 +34,7 @@
 
     "build": {
       "model": "opencode-go/deepseek-v4-flash",
+      "mode": "all",
       "instructions": [
         "./AGENTS.md",
         "./.opencode/roles/build.md"
@@ -33,7 +42,7 @@
     },
 
     "review": {
-      "model": "opencode-go/qwen-3.7-max",
+      "model": "opencode/nemotron-3-super-free",
       "mode": "subagent",
       "permission": {
         "edit": "deny"
@@ -41,6 +50,15 @@
       "instructions": [
         "./AGENTS.md",
         "./.opencode/roles/review.md"
+      ]
+    },
+
+    "escalate": {
+      "model": "opencode-go/qwen3.7-max",
+      "mode": "all",
+      "instructions": [
+        "./AGENTS.md",
+        "./.opencode/roles/escalate.md"
       ]
     }
   }

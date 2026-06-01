@@ -59,6 +59,10 @@ The UI is built as stacked layers — like sheets of fine paper. **No borders.**
 
 Done = `primary` teal · Partial = `gold` · Upcoming = muted (clock icon) · Skipped = `error` red.
 
+### Streak day states
+
+Green (adherent, ≥ threshold) = `success` teal · Yellow (partial day, streak holds) = `gold` · Red (missed, streak resets) = `error` red. No new green token — reuse `success` teal to stay on-palette.
+
 ### The "No-Line" rule
 
 1px solid borders are **prohibited** for sectioning or containment. Boundaries are defined solely through surface-color shifts (e.g. a `surface-lowest` card on a `surface` background). Horizontal dividers/rules are banned — separate items with vertical padding or alternating surface shifts. **Ghost-border fallback** (accessibility only): `outline` `rgba(190,201,199,0.3)` — never 100% opaque lines.

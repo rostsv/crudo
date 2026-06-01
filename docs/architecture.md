@@ -101,7 +101,7 @@ Tests mirror the layers: `test/{data,domain,ui,utils}/`. Shared mocks/fakes live
 
 ## 4. Domain model
 
-All quantities in **grams**; macros are **per 100g**. Types below mirror the prototype seed data.
+Quantities stored in **grams** (displayed as g or oz per user pref); macros are **per 100g**. Types below are the MVP model (from the prototype seed, updated to `product.md` decisions).
 
 ### Food (library item)
 ```
@@ -144,12 +144,10 @@ Plan {
 ### Prefs (profile/settings)
 ```
 Prefs {
-  goal            // Cut | Maintain | Bulk
-  goalKcal
-  units           // 'g' (ounces post-MVP)
-  partial         // count partial meals as complete
-  weekend         // weekend-skip
-  preOn, atOn, warnOn, eodOn, riskOn   // notification toggles
+  goal            // Cut | Maintain | Bulk — label only (no kcal target in v1)
+  units           // 'g' | 'oz' (both v1; always stored as grams)
+  streakThreshold // green line: 70 | 80 | 90 | 100 (default 80); red floor fixed at 50
+  preOn, atOn, eodOn, riskOn   // notification toggles
   preMin          // pre-meal lead minutes
 }
 ```
@@ -179,17 +177,17 @@ Single source of truth — never store computed totals.
 
 - **Per-ingredient:** `macro = food.macroPer100g × grams / 100` for p, c, f, kcal.
 - **Per-meal:** sum over ingredients (`mealMacros` in the prototype).
-- **Per-day (Today):** sum planned over all meals; consumed counts `done` fully and `partial` at 0.6 weight (prototype heuristic — confirm before MVP).
+- **Per-day (Today):** planned = sum over the day's meals. **Consumed** = kcal of ingredients actually eaten — `done` = all of a meal's ingredients, `partial` = only the checked ones, `skipped` = 0. Consumed ≤ planned (only planned items are ever marked).
 - **kcal auto-calc:** `kcal = p×4 + c×4 + f×9`. Manual override allowed only within **~10%** of calculated, else reject with an error.
 
 ---
 
 ## 7. Meal lifecycle & marking
 
-- **Marking is ingredient-level yes/no.** Per-ingredient checklist auto-derives status: all = `done`, some = `partial`, none = `skipped`. No gram-level partial tracking in MVP.
-- **Auto-skip:** if no action by end of the meal window, status → `skipped`.
-- **Retroactive logging:** allowed up to 2 hours after the window; after that it stays `skipped`.
-- **Snooze:** short, commitment-style delay; cannot push past the next meal or end of day.
+- **One-tap default:** the meal-time notification offers **Ate it ✓ / Snooze / Skip**. "Ate it" marks the **whole meal** `done` (all ingredients) in one tap, no app open — the 90% path.
+- **Partial = in-app:** opening the meal shows the ingredient checklist; status auto-derives — all checked = `done`, some = `partial`, none = `skipped`. Consumed kcal = the checked ingredients (§6). Ingredient on/off only; gram-level partial is post-MVP.
+- **Lenient missed meals:** when a window passes with no action the meal is *shown* auto-skipped, but it can still be logged **any time that day**; it locks at **midnight** (the day is source of truth). No 2-hour cutoff.
+- **Snooze:** short, commitment-style delay; cannot push past the next meal or midnight.
 
 ---
 
@@ -202,34 +200,38 @@ Single source of truth — never store computed totals.
 - **Day assignment is plan-driven:** a meal belongs to the day it was *scheduled*, not logged (a 01:00 AM meal belongs to the previous day's plan).
 - **Weekday conflict validation:** assigning a plan to a weekday already covered by another active plan raises a **Conflict modal** (lists conflicts, blocks save, offers **Override**). Inline/validation errors use a **Toast**.
 
-### Reminder modes (set in onboarding)
-- **Fixed:** explicit time per meal slot.
-- **Interval:** start time + interval + meal count (max 6) → app auto-calculates all meal times. If the last meal crosses midnight, **warn** (no hard block).
+### Reminder mode (set in onboarding)
+- **Fixed (v1):** explicit time per meal slot; notifications fire at those times.
+- **Interval → v2:** start-time + auto-spacing. Not in MVP.
 
 ---
 
 ## 9. Notifications
 
 Scheduled locally per the user's plan and `Prefs` toggles:
-- **Pre-meal** (`preMin` ahead) · **At meal time** · **Running-late warning** · **Auto-skip** at window end · **End-of-day summary** · **Streak-at-risk** mid-day.
+- **Pre-meal** (`preMin` ahead) · **At meal time** (with **Ate it / Snooze / Skip** actions) · **End-of-day summary** · **Streak-at-risk** mid-day. (No-action warning folds into end-of-day.)
 - Settings live in **Profile → Notifications** (not on Today).
 
 ---
 
 ## 10. Streaks & history
 
-- **Binary streak:** Green if ≥80% of the day's meals are `done`, else Red (resets). "Count partial as complete" and "weekend skip" prefs adjust the calculation. Yellow/partial-day is post-MVP.
-- **Milestone badges:** 7 / 30 / 100 days (shown on the profile avatar).
-- **History screen** derives: current streak + personal best, adherence %, meals completed/skipped, avg kcal, weekly adherence bar chart, recent per-day breakdown.
-- **Calendar sheet** derives per-day status + last-30-days kept/partial/missed totals.
+- **Adherence is calorie-based:** `dayAdherence = consumedKcal / plannedKcal` (§6).
+- **Three-state day** — threshold = the green line, default **80%**, user-selectable 70/80/90/100; red floor fixed at 50%:
+  - **Green** `≥ threshold` → streak **+1**
+  - **Yellow** `50% ≤ adherence < threshold` → streak **holds** (survives; no increment, no reset)
+  - **Red** `< 50%` → streak **resets to 0**
+- **Milestone badges:** 7 / 30 / 100 days; track **personal best**. Weekend-skip → post-MVP.
+- **History screen** derives: current streak + personal best, adherence %, weekly bar chart (green/yellow/red), recent per-day breakdown.
+- **Calendar sheet** derives per-day color + recent totals.
 
 ---
 
 ## 11. Subscription & data retention
 
-- 7-day free trial → full lock on expiry (no read-only mode). Monthly + annual plans (see `product.md` for pricing).
-- Lock screen uses the user's own progress as messaging.
-- **Retention:** data kept 90 days after trial expiry, then deleted; warning emails at day 7 and day 25 before deletion (backend job).
+- **No freemium.** 7-day free trial with **card up front** (App/Play subscription, auto-converts unless cancelled). Monthly + annual, annual highlighted (pricing in `product.md`).
+- Full lock on expiry (no read-only). Lock screen uses the user's own progress as messaging.
+- **Retention:** data kept 90 days after trial expiry, then deleted; warning emails at day 7 and day 25 (backend job).
 
 ---
 

@@ -1,6 +1,6 @@
 # Design System & Theme — Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans (or subagent-driven-development) to implement task-by-task. Steps use checkbox (`- [ ]`) syntax. Sequential, on the main working tree (manual-relay). Spec: `docs/specs/2026-06-01-design-system-theme.md`.
+> **For workers:** implement task-by-task, top to bottom. Each task = a contract + checkbox (`- [ ]`) steps; read the `.agents/skills` it names. Sequential, main working tree. **Do not commit** — report each task done for Opus to review & integrate. Spec: `docs/specs/2026-06-01-design-system-theme.md`.
 
 **Goal:** Build the Flutter theme foundation in `lib/ui/core/themes/` from the locked tokens in `app.css`.
 

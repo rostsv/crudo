@@ -52,6 +52,8 @@ Tasks cross the Opus↔opencode boundary as **files**. One task goes fully throu
   - **Acceptance** — the tests/behavior that prove it's done
   - **Out of scope** — so the worker stays in its lane
 
+**Plan conventions (Opus):** tool-agnostic header — **no** superpowers `REQUIRED SUB-SKILL` line (opencode lacks it); TDD steps with full real code, no placeholders; reference the `.agents/skills` each task names; **no per-task `git commit` step** — each task ends at "report for review," Opus integrates.
+
 ## Quality gates
 
 1. Human approves the **spec** before planning.

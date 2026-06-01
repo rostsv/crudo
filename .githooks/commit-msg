@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Keep authorship human-only. Strips AI co-author / attribution trailers from
+# every commit message, whichever agent/model (Opus, opencode worker) wrote it.
+set -euo pipefail
+
+msg_file="$1"
+tmp="$(mktemp)"
+
+# Drop Claude/Anthropic co-author + "Generated with" attribution lines (case-insensitive).
+grep -viE '^(co-authored-by:[[:space:]]*(claude|anthropic)|co-authored-by:.*(anthropic\.com)|.*generated with \[?claude|🤖)' "$msg_file" > "$tmp" || true
+
+# Trim trailing blank lines left behind by the removal.
+awk '{ lines[NR]=$0 } NF { last=NR } END { for (i=1; i<=last; i++) print lines[i] }' "$tmp" > "$msg_file"
+
+rm -f "$tmp"

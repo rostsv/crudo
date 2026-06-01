@@ -33,6 +33,8 @@ Environment: Dart SDK `^3.11.5`. Enable pre-commit hook once: `git config core.h
 
 **Required command order:** format → analyze → test. The pre-commit hook enforces this automatically.
 
+**Commit messages: human-only authorship.** Never add `Co-Authored-By: Claude/Anthropic`, "Generated with Claude Code", or any AI-attribution trailer — applies to every agent/model (Opus, opencode workers). The `commit-msg` hook strips them mechanically as a backstop, but don't write them.
+
 ## Project structure
 
 ```

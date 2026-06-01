@@ -12,6 +12,12 @@ Single source of truth for **every agent and model** working in this repo — Cl
   - **review** (optional) — read-only critic of diffs against this guide + the relevant skill.
 - **Worker contract:** follow this file **and** the matching skill; stay in your lane; produce small, focused diffs. Do **not** change architecture, design-system, or dependency decisions — if something here is wrong, missing, or blocks you, **stop and escalate to the architect** rather than improvising. Meet the Definition of Done before declaring a task complete.
 
+### Workflow
+
+Full operating model: **`docs/workflow.md`**. In short — the loop is **brainstorm → plan → delegate → review → integrate → finish**, manual-relay and sequential (the human runs workers and brings diffs back; Opus specs, reviews, integrates). A **spec = one feature/usable point** (`docs/specs/`); a **plan = its ordered tasks** (`docs/plans/`), each task a self-contained contract (role · goal · files · contract · skills · acceptance · out-of-scope). Every diff is reviewed (review worker + Opus) and must meet the Definition of Done before commit.
+
+**Resume a session:** this file loads first (via `CLAUDE.md`) → `git log`/`git status` → newest plan in `docs/plans/` → first unchecked task + its spec → continue the loop. Decisions live in files, never only in chat.
+
 ## Definition of done (every change)
 
 1. `dart format .` leaves nothing to change.

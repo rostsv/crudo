@@ -45,20 +45,24 @@
       "Bash(flutter:*)",
       "Bash(dart:*)"
     ],
-    "ask": [
-      "Bash(git push:*)",
-      "Bash(npm:*)",
-      "Bash(pnpm:*)",
-      "Bash(npx:*)"
-    ],
     "deny": [
       "Bash(rm:*)",
       "Bash(rmdir:*)",
       "Bash(sudo:*)",
       "Bash(git push --force:*)",
-      "Bash(git push -f:*)",
-      "Bash(cp:*.env*)",
-      "Bash(cat:*.env*)"
+      "Bash(git push -f:*)"
+    ],
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(npm:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx:*)"
     ]
+  },
+  "enabledPlugins": {
+    "caveman@caveman": true,
+    "superpowers@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
   }
 }

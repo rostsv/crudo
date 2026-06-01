@@ -57,16 +57,16 @@ lib/
 
 ## Core domain invariants (easy to get wrong)
 
-All quantities in **grams**. Calories auto-calculated `p×4 + c×4 + f×9`; manual override only if within **±10%**, else reject.
+Quantities stored in **grams** (displayed g/oz per user pref). Calories auto-calculated `p×4 + c×4 + f×9`; manual override only if within **±10%**, else reject.
 
 - **Meal marking is ingredient-level yes/no** -- not gram-level. Per-ingredient checklist auto-derives: all checked = done, some = partial, none = skipped.
-- **Streak is binary** -- Green (≥ threshold, default 80%) or Red (resets). Yellow/partial-day is post-MVP.
+- **Streak is calorie-based, 3-state** -- day adherence = consumed ÷ planned kcal. Green `≥ threshold` (default 80%, selectable 70/80/90/100) → +1; Yellow `50–<threshold` → holds; Red `<50%` → resets. Weekend-skip is post-MVP.
 - **Plans are templates** -- edits affect future days only. Today's logged/skipped meals are locked; upcoming-today meals can be edited/swapped.
 - **Snapshot on schedule/log** -- data is snapshotted when scheduled or logged; later library edits/deletions never alter past days or history.
 - **Day assignment comes from the plan** -- a meal at 01:00 AM belongs to the previous day's plan.
-- **Auto-skip + retro-logging** -- meals auto-skip if no action by end of window; user can retro-log up to **2 hours** after the window.
+- **Lenient missed meals** -- a passed window shows auto-skipped, but the meal can still be logged **any time that day**; locks at **midnight** (no 2-hour cutoff).
 - **At least one plan must always exist** -- last plan cannot be deleted.
-- **Two reminder modes (onboarding choice):** fixed time (per-meal) or interval (start + interval + count ≤6; times auto-calculated).
+- **Reminder mode:** fixed time per meal (v1). Interval mode → v2.
 
 ## Design system (non-negotiable)
 

@@ -35,6 +35,7 @@ Crudo is a Flutter app in **early implementation**. `lib/main.dart` is a minimal
 - `docs/product.md` — product definition, MVP scope (in vs. out), onboarding flow, screen-by-screen features, product decisions (marking, snooze, streak, paywall).
 - `docs/design_system.md` — visual language: color tokens (incl. gold), typography, elevation, spacing, components, navigation, motion, do's/don'ts.
 - `docs/architecture.md` — tech stack, domain/data model, nutrition calc, app state & navigation map, snapshots/scheduling/notifications, the skill catalog (§12), and open **(decision pending)** items.
+- `docs/functional-overview.md` — key features, use cases, user flows, screen/navigation map.
 - `docs/design/mock/onboarding/` — PNG mockups for onboarding screens.
 
 ### Design prototype (the pixel-perfect target)

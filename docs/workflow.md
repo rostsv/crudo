@@ -23,7 +23,7 @@ Tasks cross the Opus↔opencode boundary as **files**. One task goes fully throu
 | 1 | **Brainstorm** | you + Opus | `superpowers:brainstorming` | a spec in `docs/specs/` |
 | 2 | **Plan** | Opus | `superpowers:writing-plans` | a plan in `docs/plans/` (ordered tasks) |
 | 3 | **Delegate** | you relay | opencode worker (`ui`/`implement`/`build`) | a diff in the working tree |
-| 4 | **Review** | review worker + Opus | `git diff` + the task's skill + `superpowers:verification-before-completion` | pass/fail + fixes |
+| 4 | **Review** | Opus (+ review worker on risky/feature diffs) | `git diff` + the task's skill + `superpowers:verification-before-completion` | pass/fail + fixes |
 | 5 | **Integrate** | Opus + hook | `caveman-commit` + `.githooks/pre-commit` | a commit |
 | 6 | **Finish** | Opus | `superpowers:finishing-a-development-branch` | pushed slice |
 
@@ -54,8 +54,16 @@ Tasks cross the Opus↔opencode boundary as **files**. One task goes fully throu
 
 1. Human approves the **spec** before planning.
 2. Human approves the **plan** before delegating.
-3. **Every task diff** is reviewed (review worker + Opus) against its spec + the skill, and `flutter analyze` + `flutter test` run, before commit.
+3. **Opus reviews every task diff** against spec + skill; `flutter analyze` + `flutter test` run before commit. The **review worker** runs *selectively* (see below), not on every diff.
 4. The **pre-commit hook** (`.githooks/pre-commit`) mechanically enforces `dart format` + `flutter analyze` on every commit, whichever model wrote the code. Enable once per clone: `git config core.hooksPath .githooks`.
+
+## When to run the review worker
+
+The `review` worker (Qwen 3.7 Max, read-only, `.opencode/roles/review.md`) is a **selective second opinion, not a default gate** — Opus reviews every diff, and the pre-commit hook + tests catch mechanical issues. Don't run it blindly.
+
+- **Skip** for: boilerplate · scaffolding · theme tokens · formatting · trivial diffs.
+- **Run** for: domain logic (adherence/streak, snapshots, day-assignment, meal-marking) · auth/security · a whole-feature merge.
+- **Strict scope** (enforced by the role file): it reviews **only the given diff** vs its spec/skill/invariants; flags only correctness / spec / invariant / security issues; never refactors, re-architects, or raises lint the hook already covers. Output = `PASS` or a bounded `BLOCK` list. Feed it just `git diff` + the spec slice + the named skill — never the whole repo.
 
 ## caveman fit
 

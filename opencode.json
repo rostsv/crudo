@@ -33,7 +33,7 @@
     },
 
     "review": {
-      "model": "opencode-go/minimax-m2.7",
+      "model": "opencode-go/qwen-3.7-max",
       "mode": "subagent",
       "permission": {
         "edit": "deny"

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:crudo/ui/core/themes/theme.dart';
 
 void main() => runApp(const CrudoApp());
 
@@ -10,10 +11,7 @@ class CrudoApp extends StatelessWidget {
     return MaterialApp(
       title: 'Crudo',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF004D49)),
-        useMaterial3: true,
-      ),
+      theme: crudoTheme,
       home: const Scaffold(body: Center(child: Text('Crudo'))),
     );
   }

@@ -32,5 +32,38 @@ Context is per-session and gets auto-summarized when long (lossy). Clearing is *
 
 Short single features can stay in one session through plan → review.
 
-## Picking a worker model
-See `docs/architecture.md` / `opencode.json`. Quick: `build` (DeepSeek Flash) = boilerplate/codegen; `implement` (MiniMax) = logic/tests; `ui` (Kimi) = screens; `review` (Qwen 3.7 Max) = selective second opinion on risky diffs only.
+## Working with opencode workers
+
+The workers (`ui` / `implement` / `build` / `review`) are defined in `opencode.json`; each loads `AGENTS.md` + its role file (`.opencode/roles/<role>.md`) + the `.agents/skills` a task names. **No extra skill needed** — "how to implement / review / boilerplate" lives in the **role file**, not a separate skill. You drive them; Opus reviews + commits.
+
+### Choosing the agent (= the model)
+Agent ↔ model is bound in `opencode.json`. The plan's task **`role`** field tells you which to pick.
+
+| Task | Agent | Model |
+|---|---|---|
+| Boilerplate · codegen · scaffolding · fixups | `build` | DeepSeek V4 Flash (cheapest) |
+| Controllers · repos · models · logic · tests | `implement` | MiniMax M2.7 |
+| Screens · widgets from `app.css`/prototype | `ui` | Kimi |
+| Review a risky diff | `review` | Qwen 3.7 Max (read-only) |
+| Hard logic · architecture-y · nasty bug | escalate `implement` → GLM-5.1 / Qwen 3.7 Max |
+
+The plan is dollar-capped, so prefer the cheapest agent that fits; escalate only when needed.
+
+### Run an implementation
+1. Pick `implement` (or `build` for mechanical work).
+2. Prompt: *"Implement `docs/plans/<plan>.md` task by task. Follow AGENTS.md + your role + the skills each task names. `dart format .` + `flutter analyze` + `flutter test` must be green. Do NOT commit. Report when done."*
+3. It works in the same repo. When done → tell Opus → Opus reviews the working-tree diff and commits.
+
+### Run a review
+Only for risky diffs (domain logic, auth, a feature merge) — **skip** for mechanical/theme work (the hook + tests + Opus cover those).
+1. Pick `review` (read-only — it can't edit).
+2. Feed it only the `git diff` + the spec slice + the named skill.
+3. It returns `PASS` or a bounded `BLOCK` list.
+
+### Workers never commit
+They format + test + report; Opus reviews and commits (opencode doesn't run the git pre-commit hook, so the worker formats; the hook backstops Opus's commits).
+
+### When to clear opencode context
+- **Clear between tasks/features.** Each plan task is self-contained → start each fresh (less drift, fewer tokens on the capped plan).
+- Keep context only within one task's implement → fix → green loop.
+- Switching agent/role → clear.

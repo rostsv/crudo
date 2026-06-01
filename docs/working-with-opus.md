@@ -60,6 +60,16 @@ Only for risky diffs (domain logic, auth, a feature merge) — **skip** for mech
 2. Feed it only the `git diff` + the spec slice + the named skill.
 3. It returns `PASS` or a bounded `BLOCK` list.
 
+### Prompt templates (copy-paste)
+Select the agent (opencode picker — `Tab` / `@name`), then paste. Prompts stay short — the role file + AGENTS.md carry the *how*; you supply *what* + guardrails.
+
+- **Whole plan** → `@implement`: `Implement docs/plans/<plan>.md task by task. Follow AGENTS.md + your role + the skills each task names. dart format + flutter analyze + flutter test green. Do NOT commit. Report when done.`
+- **One task** → `@implement`/`@build`: `Do only Task N of docs/plans/<plan>.md. Same rules: format+analyze+test green, no commit, report.`
+- **A screen** → `@ui`: `Implement Task N (the <screen>) of docs/plans/<plan>.md. Match docs/design/prototype/app.css + screens/<x>.jsx exactly. Widget test. No commit. Report.`
+- **Review** → `@review`: `Review the working-tree diff (git diff) against docs/specs/<spec>.md and skill <name>. Output PASS or a bounded BLOCK list. Read-only.`
+
+Pattern: **agent = kind of work · prompt = which artifact + "no commit, report."**
+
 ### Workers never commit
 They format + test + report; Opus reviews and commits (opencode doesn't run the git pre-commit hook, so the worker formats; the hook backstops Opus's commits).
 

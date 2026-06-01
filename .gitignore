@@ -50,3 +50,6 @@ app.*.map.json
 
 # Skills lockfile (kept local)
 skills-lock.json
+
+# Plugin-managed skills (caveman, etc.) — not vendored
+.agents/skills/caveman/

@@ -16,6 +16,8 @@ How the human, Opus (Claude Code), and the opencode worker models collaborate to
 
 Tasks cross the Opus↔opencode boundary as **files**. One task goes fully through implement → review → integrate **before the next** (sequential, on the main working tree — no parallel worktrees for now). The per-task spec is the contract that lets a cheaper worker produce correct code with no context beyond `AGENTS.md` + its role file + the named skill(s).
 
+**Workers do not commit.** They implement, run `dart format .` + `flutter analyze` + `flutter test` (green), then stop. **Opus reviews the working-tree diff and makes the commit(s)** — one per task or per feature, not per micro-step. (opencode doesn't run the git pre-commit hook, so the worker formats; the hook backstops Opus's own commits.) `dart format .` is the single canonical style — no config.
+
 ## The loop (per feature slice)
 
 | # | Phase | Who | Tool / skill | Output |

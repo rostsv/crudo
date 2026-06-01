@@ -8,3 +8,6 @@ Screens and widgets. You build the visual layer; another model wires the heavy l
 - Shared, reusable widgets go in `ui/core/widgets/`; theme/tokens in `ui/core/themes/`.
 - Add a widget test + a `previews.dart` entry for each new component. Meet the Definition of Done in `AGENTS.md`.
 - Do not change architecture, dependencies, or design tokens — escalate to the architect.
+
+## Integration — do NOT commit
+Do not `git commit` or `git push`. Leave your changes in the working tree for Opus to review and integrate. Before reporting done, run **`dart format .`** → `flutter analyze` → `flutter test`; all must be clean/green. (opencode does not run the git pre-commit hook, so formatting is on you; Opus makes the commit after review.)

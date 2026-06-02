@@ -3,6 +3,10 @@
 
   "model": "opencode-go/deepseek-v4-flash",
 
+  "instructions": [
+    "./AGENTS.md"
+  ],
+
   "skills": {
     "paths": [".agents/skills"]
   },
@@ -10,35 +14,23 @@
   "agent": {
     "plan": {
       "model": "opencode-go/qwen3.7-max",
-      "instructions": [
-        "./AGENTS.md",
-        "./docs/workflow.md"
-      ]
+      "prompt": "{file:./docs/workflow.md}"
     },
 
     "ui": {
       "model": "opencode-go/kimi-k2.6",
-      "instructions": [
-        "./AGENTS.md",
-        "./.opencode/roles/ui.md"
-      ]
+      "prompt": "{file:./.opencode/roles/ui.md}"
     },
 
     "implement": {
       "model": "opencode-go/kimi-k2.6",
-      "instructions": [
-        "./AGENTS.md",
-        "./.opencode/roles/implement.md"
-      ]
+      "prompt": "{file:./.opencode/roles/implement.md}"
     },
 
     "build": {
       "model": "opencode/deepseek-v4-flash-free",
       "mode": "all",
-      "instructions": [
-        "./AGENTS.md",
-        "./.opencode/roles/build.md"
-      ]
+      "prompt": "{file:./.opencode/roles/build.md}"
     },
 
     "review": {
@@ -47,19 +39,13 @@
       "permission": {
         "edit": "deny"
       },
-      "instructions": [
-        "./AGENTS.md",
-        "./.opencode/roles/review.md"
-      ]
+      "prompt": "{file:./.opencode/roles/review.md}"
     },
 
     "escalate": {
       "model": "opencode-go/qwen3.7-max",
       "mode": "all",
-      "instructions": [
-        "./AGENTS.md",
-        "./.opencode/roles/escalate.md"
-      ]
+      "prompt": "{file:./.opencode/roles/escalate.md}"
     }
   }
 }

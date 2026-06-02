@@ -51,7 +51,7 @@ The plan is dollar-capped, so prefer the cheapest agent that fits; escalate only
 
 ### Run an implementation
 1. Pick `implement` (or `build` for mechanical work).
-2. Prompt: *"Implement `docs/plans/<plan>.md` task by task. Follow AGENTS.md + your role + the skills each task names. `dart format .` + `flutter analyze` + `flutter test` must be green. Do NOT commit. Report when done."*
+2. Prompt: *"Implement `docs/plans/<plan>.md` task by task. `dart format .` + `flutter analyze` + `flutter test` must be green. Do NOT commit. Report when done."* (The worker auto-loads `AGENTS.md` + its role + the skills each task names — don't repeat them in the prompt.)
 3. It works in the same repo. When done → tell Opus → Opus reviews the working-tree diff and commits.
 
 ### Run a review
@@ -63,7 +63,7 @@ Only for risky diffs (domain logic, auth, a feature merge) — **skip** for mech
 ### Prompt templates (copy-paste)
 Select the agent (opencode picker — `Tab` / `@name`), then paste. Prompts stay short — the role file + AGENTS.md carry the *how*; you supply *what* + guardrails.
 
-- **Whole plan** → `@implement`: `Implement docs/plans/<plan>.md task by task. Follow AGENTS.md + your role + the skills each task names. dart format + flutter analyze + flutter test green. Do NOT commit. Report when done.`
+- **Whole plan** → `@implement`: `Implement docs/plans/<plan>.md task by task. dart format + flutter analyze + flutter test green. Do NOT commit. Report when done.`
 - **One task** → `@implement`/`@build`: `Do only Task N of docs/plans/<plan>.md. Same rules: format+analyze+test green, no commit, report.`
 - **A screen** → `@ui`: `Implement Task N (the <screen>) of docs/plans/<plan>.md. Match docs/design/prototype/app.css + screens/<x>.jsx exactly. Widget test. No commit. Report.`
 - **Review** → `@review`: `Review the working-tree diff (git diff) against docs/specs/<spec>.md and skill <name>. Output PASS or a bounded BLOCK list. Read-only.`

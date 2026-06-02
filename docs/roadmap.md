@@ -14,7 +14,7 @@ Status legend: ✅ done · ◻ not started.
 |---|---|---|---|---|
 | ✅ | Design system / theme | ui | — | committed (`8ce6d77`) |
 | S01 | App scaffold + config | — | theme | pubspec deps, flavors, `ProviderScope`, `config/` DI, build_runner. Unblocks all. |
-| S02 | Domain models + nutrition math | logic | S01 | freezed models + enums; `utils/` calc (`p×4+c×4+f×9`), ±10% validator, day/date helpers. |
+| S02 | Domain models + nutrition math | logic | S01 | freezed models + enums; `utils/` calc (`p×4+c×4+f×9`), ±10% validator, day/date helpers. **Also owns codegen setup** (deferred from S01): add `build_runner`/`freezed`/`riverpod_generator`/`json_serializable`, resolve the analyzer/`meta`-pin conflict on Flutter 3.41.9, set the generated-file commit policy. `custom_lint`/`riverpod_lint` stay deferred until they support analyzer ≥10. |
 | S03 | Data layer (local repos + seed) | logic | S02 | repos as **async, per-user-scoped** providers; in-memory + bundled seed; `local_food_service`. Backend-shaped contract. |
 | S04 | Routing shell + core widgets | ui | S01 | `StatefulShellRoute` 4 tabs, sheet/route infra, shared widgets (PrimaryCta, SelectionCard, Pill, MealCard, MacroRing, SheetScaffold, Toast). |
 

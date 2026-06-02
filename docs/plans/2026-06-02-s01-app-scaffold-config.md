@@ -6,7 +6,7 @@
 
 **Architecture:** Two entry points (`main.dart` = prod, `main_development.dart` = dev) delegate to a shared `bootstrap(AppConfig)` that builds the config, wraps `runApp` in a `ProviderScope`, and overrides `appConfigProvider`. `CrudoApp` (in `lib/app.dart`) is a `ConsumerWidget` rendering the existing `crudoTheme` + a centered wordmark; it reads `appConfigProvider` only for a dev marker. Env values arrive via `--dart-define-from-file` and are read by `AppConfig.fromEnvironment`.
 
-**Tech Stack:** Flutter (Material 3), Riverpod 3.x (`flutter_riverpod`, `riverpod_annotation`, codegen toolchain), `go_router` (installed, used in S04), `freezed`/`json` annotations (installed, used in S02), `build_runner`, `riverpod_lint`/`custom_lint`. Tests via `flutter_test` + `package:checks`.
+**Tech Stack:** Flutter (Material 3), Riverpod 3.x (`flutter_riverpod` `^3.3.1` — plain `Provider`, no codegen yet), `go_router` `^17.2.3` (installed, used in S04), `flutter_lints` `^6.0.0`, tests via `flutter_test` + `package:checks`. **Codegen (`build_runner`/`freezed`/generators) + `custom_lint`/`riverpod_lint` deferred to S02** (analyzer/`meta` conflict on Flutter 3.41.9).
 
 **Conventions:** follow `AGENTS.md`. Each task = one worker handoff; Opus reviews the diff and integrates. `dart format` + `flutter analyze` must be clean (pre-commit hook enforces). Generated files (`*.g.dart`, `*.freezed.dart`) **are committed** — never gitignored.
 
@@ -15,26 +15,26 @@
 ### Task 1: Dependencies + lint + codegen toolchain
 
 **Role:** build · **Skills:** `flutter-riverpod-arch`, `flutter-apply-architecture-best-practices`
-**Goal:** Install the core toolchain and activate Riverpod lint; `build_runner` runs clean.
+**Goal:** Install the deps S01 actually uses + lint baseline. **Codegen toolchain is deferred to S02** (see spec Dependencies — it forces overrides + a dev-prerelease generator on Flutter 3.41.9, and S01 has no generated code).
 **Files:** Modify `pubspec.yaml` · Modify/Create `analysis_options.yaml`
-**Contract:** runtime deps `flutter_riverpod`, `riverpod_annotation`, `go_router`, `freezed_annotation`, `json_annotation`; dev deps `build_runner`, `riverpod_generator`, `freezed`, `json_serializable`, `riverpod_lint`, `custom_lint`. `analysis_options.yaml` includes `flutter_lints` + `custom_lint` plugin, excludes generated files.
-**Out of scope:** any Dart code; `supabase_flutter`, notifications, billing (deferred to their specs).
+**Contract:** runtime deps `flutter_riverpod` (`^3.3.1`), `go_router` (`^17.2.3`); dev deps `flutter_lints` (`^6.0.0`), `checks` (`^0.3.1`). No codegen, no `custom_lint`/`riverpod_lint`, **no `dependency_overrides`**, no prerelease direct deps. `analysis_options.yaml` = `flutter_lints` + generated-file excludes, **no `custom_lint` plugin line**.
+**Out of scope:** any Dart code; codegen toolchain (S02); `supabase_flutter`, notifications, billing (their specs).
 
-- [ ] **Step 1: Add runtime deps** (let pub resolve latest compatible — do not hand-pin)
+- [ ] **Step 1: Add runtime deps**
 
 Run:
 ```bash
-flutter pub add flutter_riverpod riverpod_annotation go_router freezed_annotation json_annotation
+flutter pub add flutter_riverpod go_router
 ```
-Expected: `pubspec.yaml` gains the five deps; `pub get` succeeds.
+Expected: both added; `pub get` succeeds. Confirm no prerelease leaked in: `flutter_riverpod` resolves to stable `3.3.1` (run `flutter pub upgrade` if a `-dev` version appears).
 
 - [ ] **Step 2: Add dev deps**
 
 Run:
 ```bash
-flutter pub add dev:build_runner dev:riverpod_generator dev:freezed dev:json_serializable dev:riverpod_lint dev:custom_lint
+flutter pub add dev:checks
 ```
-Expected: six dev deps added (`flutter_lints` already present); `pub get` succeeds.
+Expected: `checks` added (`flutter_lints` already present); `pub get` succeeds.
 
 - [ ] **Step 3: Write `analysis_options.yaml`** (replace whatever is there)
 
@@ -42,8 +42,6 @@ Expected: six dev deps added (`flutter_lints` already present); `pub get` succee
 include: package:flutter_lints/flutter.yaml
 
 analyzer:
-  plugins:
-    - custom_lint
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
@@ -52,20 +50,12 @@ linter:
   rules: {}
 ```
 
-- [ ] **Step 4: Verify codegen runs clean** (nothing to generate yet — must still exit 0)
+- [ ] **Step 4: Analyze**
 
-Run:
-```bash
-dart run build_runner build --delete-conflicting-outputs
-```
-Expected: completes with "Succeeded" / "no outputs"; exit 0.
+Run: `flutter analyze`
+Expected: 0 issues. Confirm `pubspec.yaml` has no `dependency_overrides` block.
 
-- [ ] **Step 5: Analyze**
-
-Run: `flutter analyze && dart run custom_lint`
-Expected: `flutter analyze` 0 issues; `custom_lint` 0 issues.
-
-- [ ] **Step 6: Report** this task done for review (do **not** commit).
+- [ ] **Step 5: Report** this task done for review (do **not** commit).
 
 ---
 
@@ -366,8 +356,8 @@ Expected: all tests green (config + smoke + theme tests).
 
 - [ ] **Step 9: Format + analyze**
 
-Run: `dart format . && flutter analyze && dart run custom_lint`
-Expected: no format changes; 0 analyzer issues; 0 lint issues.
+Run: `dart format . && flutter analyze`
+Expected: no format changes; 0 analyzer issues.
 
 - [ ] **Step 10: Report** this task done for review (do **not** commit).
 
@@ -546,12 +536,13 @@ OPUS / XCODE (manual, on macOS):
 ---
 
 ## Final verification (Opus, before integrating)
-- [ ] `dart format .` — no changes
-- [ ] `flutter analyze` — 0 issues · `dart run custom_lint` — 0 issues
-- [ ] `dart run build_runner build --delete-conflicting-outputs` — exit 0
-- [ ] `flutter test` — all green (config + smoke + theme)
-- [ ] dev: `flutter run --flavor dev -t lib/main_development.dart --dart-define-from-file=config/dev.json` → themed wordmark + "Crudo Dev" marker
-- [ ] prod: `flutter run --flavor prod -t lib/main.dart --dart-define-from-file=config/prod.json` → wordmark, no marker, bundle `app.rostsv.crudo`
-- [ ] dev + prod install side by side on one device (Android confirmed via Task 5; iOS via Task 6)
-- [ ] `config/dev.json`/`config/prod.json` gitignored; `config/example.json` committed
-- [ ] Update `AGENTS.md` Commands section with the per-flavor run lines (Opus, at integration).
+- [x] `dart format .` — no changes
+- [x] `flutter analyze` — 0 issues (`custom_lint` deferred to S02)
+- [x] `flutter test` — all green (14: config + smoke + theme)
+- [x] no `dependency_overrides`; no prerelease direct deps (`flutter_riverpod` = stable 3.3.1)
+- [x] Android: both debug APKs assemble (`--flavor dev`/`prod`)
+- [ ] **iOS flavor Xcode GUI (Task 6) — PENDING.** xcconfig + Info.plist text files in place; build-config/scheme creation still needed (Opus, on macOS) before `flutter run --flavor` works on iOS.
+- [x] `config/dev.json`/`config/prod.json` gitignored; `config/example.json` committed
+- [x] `AGENTS.md` Commands updated with per-flavor run lines.
+
+**Codegen note:** `build_runner`/codegen verification removed — deferred to S02 (no generated code in S01).

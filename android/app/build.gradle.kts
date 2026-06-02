@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.rostsv.crudo"
+    namespace = "app.rostsv.crudo"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,13 +21,27 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.rostsv.crudo"
+        applicationId = "app.rostsv.crudo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+    }
+
+    flavorDimensions += "app"
+
+    productFlavors {
+        create("dev") {
+            dimension = "app"
+            applicationIdSuffix = ".dev"
+            resValue(type = "string", name = "app_name", value = "Crudo Dev")
+        }
+        create("prod") {
+            dimension = "app"
+            resValue(type = "string", name = "app_name", value = "Crudo")
+        }
     }
 
     buildTypes {

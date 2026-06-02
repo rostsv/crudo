@@ -19,15 +19,17 @@ Flutter app, early implementation. `lib/main.dart` is still a placeholder (no pr
 
 ```bash
 flutter pub get                                          # install deps (run first)
-flutter run                                             # run on connected device/simulator
-flutter run -d ios|chrome|<device>                      # target specific device
+# Flavored run (dev + prod coexist on device):
+flutter run --flavor dev  -t lib/main_development.dart --dart-define-from-file=config/dev.json
+flutter run --flavor prod -t lib/main.dart            --dart-define-from-file=config/prod.json
 dart format .                                           # format (pre-commit checks this)
 flutter analyze                                         # lint + static analysis
 flutter test                                            # run all tests
 flutter test test/widget_test.dart                      # single test file
 flutter test --name "<substring>"                       # tests matching name
-dart run build_runner build --delete-conflicting-outputs  # codegen: freezed, riverpod, mockito
+dart run build_runner build --delete-conflicting-outputs  # codegen: freezed, riverpod (added in S02)
 ```
+> `config/dev.json` / `config/prod.json` are gitignored — copy `config/example.json` and fill locally. The codegen toolchain (`build_runner`/`freezed`/generators) arrives in S02; see `docs/architecture.md §1`.
 
 Environment: Dart SDK `^3.11.5`. Enable pre-commit hook once: `git config core.hooksPath .githooks`.
 

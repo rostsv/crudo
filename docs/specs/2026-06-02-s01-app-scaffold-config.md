@@ -3,7 +3,7 @@
 **Status:** approved · **Spec S01 (foundation)** · scope = project toolchain, flavors, config plumbing, lint, and a themed boot placeholder. No router, no domain, no features.
 
 ## Goal
-Take the repo from "theme exists, `main.dart` is the default counter" to a real foundation: the app compiles and runs on **iOS + Android** in **dev + prod** flavors, the core toolchain (Riverpod / go_router / freezed / build_runner) and lint are installed, environment config is read through a typed `AppConfig`, and the app boots into a themed "Crudo" placeholder. Everything later builds on this; it ships nothing user-facing beyond the placeholder.
+Take the repo from "theme exists, `main.dart` is the default counter" to a real foundation: the app compiles and runs on **iOS + Android** in **dev + prod** flavors, Riverpod + `go_router` + `flutter_lints` are installed, environment config is read through a typed `AppConfig`, and the app boots into a themed "Crudo" placeholder. Everything later builds on this; it ships nothing user-facing beyond the placeholder. (The codegen toolchain — `build_runner`/`freezed`/generators — is deferred to S02; see Dependencies.)
 
 ## Why
 Every later spec assumes: `ProviderScope` at the root, a config object for environment values (Supabase URL/key land at S20 but the plumbing must exist behind a stable interface), per-flavor builds so dev and prod coexist on a device, codegen wired (`*.g.dart` / `*.freezed.dart`), and Riverpod lint rules active. Doing this once, mechanically, keeps feature specs focused on behavior.
@@ -14,27 +14,28 @@ Every later spec assumes: `ProviderScope` at the root, a config object for envir
 - **Platforms:** **iOS + Android** (web not configured in v1).
 - **Deps:** core toolchain now; `supabase_flutter`/billing/notifications deferred to their specs.
 - **Config:** `--dart-define-from-file` per flavor → typed `AppConfig`.
-- **Lint:** `flutter_lints` + `riverpod_lint`/`custom_lint`.
+- **Lint:** `flutter_lints` only (`custom_lint`/`riverpod_lint` deferred — analyzer-version conflict).
 - **Folder tree:** already scaffolded; fill gaps only.
 - **Identity:** `app.rostsv.crudo` / "Crudo"; dev suffixes to `app.rostsv.crudo.dev` / "Crudo Dev".
 - **main:** themed `MaterialApp` + centered wordmark, `ProviderScope` at root.
 - **Tests:** widget smoke + `AppConfig` unit test.
 
 ## Dependencies (`pubspec.yaml`)
-Add the **core toolchain** only — vendor/feature deps land with their specs.
+Add **only what S01 actually uses** — vendor/feature deps land with their specs.
 
 **dependencies:**
-- `flutter_riverpod` · `riverpod_annotation` — state layer; `ProviderScope` at root from S01.
-- `go_router` — routing dep installed now; *used* in S04.
-- `freezed_annotation` · `json_annotation` — model annotations; *used* in S02.
+- `flutter_riverpod` (`^3.3.1`) — state layer; `ProviderScope` at root from S01.
+- `go_router` (`^17.2.3`) — routing dep; *used* in S04 (analyzer-independent, resolves clean now).
 
 **dev_dependencies:**
-- `build_runner` · `riverpod_generator` · `freezed` · `json_serializable` — codegen toolchain.
-- `riverpod_lint` · `custom_lint` — Riverpod lint rules (+ existing `flutter_lints`).
+- `flutter_lints` (`^6.0.0`) — lint baseline.
+- `checks` (`^0.3.1`) — assertions for tests.
+
+**Codegen toolchain deferred to S02 (decision, 2026-06-02).** `build_runner`, `freezed`, `riverpod_generator`/`riverpod_annotation`, `json_serializable`/`freezed_annotation`/`json_annotation` are **not** added in S01 — S01 has no generated code (no models; `appConfigProvider` is a plain `Provider`). Adding them now is gratuitous and, on Flutter 3.41.9 (pins `meta 1.17`), forces `dependency_overrides` + a dev-prerelease generator. S02 (first freezed model) owns the codegen + analyzer/meta version alignment.
+
+**`custom_lint` / `riverpod_lint` deferred (decision, 2026-06-02).** `custom_lint 0.8.1` caps `analyzer ^8`, incompatible with the Riverpod-3.x / analyzer-10+ stack. Lint = `flutter_lints` + Opus/`@review` for now; revisit when `custom_lint` supports analyzer ≥10. **No `analyzer: plugins: [custom_lint]` line in `analysis_options.yaml`.**
 
 **Deferred (do NOT add here):** `supabase_flutter` (S20) · local-notifications package (S14) · billing/RevenueCat (S23) · `flutter_launcher_icons`/`flutter_native_splash` (S25).
-
-`dart run build_runner build --delete-conflicting-outputs` must run clean even though nothing is generated yet.
 
 ## Flavors & entry points
 Two entry files delegate to one shared bootstrap:
@@ -83,20 +84,20 @@ flutter run --flavor prod -t lib/main_production.dart  --dart-define-from-file=c
 ```
 include: package:flutter_lints/flutter.yaml
 analyzer:
-  plugins:
-    - custom_lint
   exclude:
     - "**/*.g.dart"
     - "**/*.freezed.dart"
+linter:
+  rules: {}
 ```
-`riverpod_lint` activates via `custom_lint`. `flutter analyze` (and `dart run custom_lint`) clean.
+`flutter_lints` only — `custom_lint`/`riverpod_lint` deferred (see Dependencies). `flutter analyze` clean. (The `*.g.dart`/`*.freezed.dart` excludes are harmless now and ready for when codegen lands in S02.)
 
 ## Folder tree
 Already scaffolded (`.gitkeep` across `lib/` + `test/`). S01 only fills gaps:
 - `lib/config/app_config.dart` (replaces the `.gitkeep`).
-- `lib/bootstrap.dart`, `lib/main_development.dart`, `lib/main_production.dart`.
+- `lib/bootstrap.dart`, `lib/main_development.dart` (dev entry); `lib/main.dart` becomes the prod entry (replaces the counter app).
 - `testing/` subpackage stub (`testing/fakes/.gitkeep`, `testing/models/.gitkeep`) for shared mocks/fakes (not shipped) — per architecture §2.
-- `.gitignore`: add `config/dev.json`, `config/prod.json` (keep `config/example.json`). Generated `*.g.dart` / `*.freezed.dart` — commit policy: **commit** generated files (so CI/workers don't need codegen to analyze); document in AGENTS.md.
+- `.gitignore`: add `config/dev.json`, `config/prod.json` (keep `config/example.json`). (Generated `*.g.dart`/`*.freezed.dart` commit policy is set in S02 when codegen lands.)
 
 ## Tests
 - **Widget smoke** (`test/widget_test.dart`, replacing the default): pump `ProviderScope(overrides: [appConfigProvider.overrideWithValue(const AppConfig(flavor: Flavor.dev))], child: const CrudoApp())`; assert the "Crudo" wordmark renders and `Theme.of(context)` is `crudoTheme` (e.g. `CrudoColors` extension non-null).
@@ -106,8 +107,8 @@ Already scaffolded (`.gitkeep` across `lib/` + `test/`). S01 only fills gaps:
 - `flutter run --flavor dev -t lib/main_development.dart --dart-define-from-file=config/dev.json` launches on an iOS simulator **and** an Android emulator, showing the themed wordmark + "Crudo Dev" marker.
 - prod flavor launches with bundle `app.rostsv.crudo`, name "Crudo", no dev marker.
 - dev + prod install **side by side** on one device.
-- `dart run build_runner build --delete-conflicting-outputs` exits 0.
-- `dart format .` clean · `flutter analyze` clean · `dart run custom_lint` clean · `flutter test` green.
+- `dart format .` clean · `flutter analyze` clean · `flutter test` green.
+- No `dependency_overrides` in `pubspec.yaml`; no prerelease versions as direct deps.
 - `appConfigProvider` is overridden at the root and readable from a `ConsumerWidget`.
 - `config/dev.json` / `config/prod.json` are gitignored; `config/example.json` committed.
 

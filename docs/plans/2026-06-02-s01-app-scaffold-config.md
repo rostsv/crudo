@@ -541,7 +541,7 @@ OPUS / XCODE (manual, on macOS):
 - [x] `flutter test` — all green (14: config + smoke + theme)
 - [x] no `dependency_overrides`; no prerelease direct deps (`flutter_riverpod` = stable 3.3.1)
 - [x] Android: both debug APKs assemble (`--flavor dev`/`prod`)
-- [ ] **iOS flavor Xcode GUI (Task 6) — PENDING.** xcconfig + Info.plist text files in place; build-config/scheme creation still needed (Opus, on macOS) before `flutter run --flavor` works on iOS.
+- [x] **iOS flavor — DONE.** xcconfig drive name + bundle id; `Debug/Release/Profile-{dev,prod}` build configs + `dev`/`prod` schemes added (via `xcodeproj` gem, not GUI). iOS bundle id aligned to `app.rostsv.crudo`. Verified: `flutter build ios --flavor dev --no-codesign` builds `app.rostsv.crudo.dev`.
 - [x] `config/dev.json`/`config/prod.json` gitignored; `config/example.json` committed
 - [x] `AGENTS.md` Commands updated with per-flavor run lines.
 

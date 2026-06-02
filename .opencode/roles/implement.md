@@ -14,3 +14,5 @@ Feature logic: controllers, repositories, services, domain models, and their tes
 
 ## Integration — do NOT commit
 Do not `git commit` or `git push`. Leave your changes in the working tree for Opus to review and integrate. Before reporting done: run **`dart format .`** → `flutter analyze` → `flutter test` (all green), then **invoke `@review` on your diff and fix any `BLOCK` findings**. Only then report. (opencode does not run the git pre-commit hook, so formatting is on you; Opus makes the final review + commit.)
+
+**Write a completion report** as your final step: create `.opencode/handoff/<plan-basename>.report.md` using the format in `docs/workflow.md` (status · per-task checklist · pasted real verification output · files touched · deviations · anything that needs Opus). This file is gitignored and is how Opus reviews — do not rely on chat. Flag any task that's partial/blocked (e.g. iOS Xcode-GUI steps left for Opus).

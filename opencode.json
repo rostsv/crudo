@@ -37,7 +37,10 @@
       "model": "opencode/nemotron-3-super-free",
       "mode": "subagent",
       "permission": {
-        "edit": "deny"
+        "edit": {
+          "**": "deny",
+          ".opencode/handoff/**": "allow"
+        }
       },
       "prompt": "{file:./.opencode/roles/review.md}"
     },

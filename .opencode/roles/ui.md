@@ -11,3 +11,5 @@ Screens and widgets. You build the visual layer; another model wires the heavy l
 
 ## Integration — do NOT commit
 Do not `git commit` or `git push`. Leave your changes in the working tree for Opus to review and integrate. Before reporting done, run **`dart format .`** → `flutter analyze` → `flutter test`; all must be clean/green. (opencode does not run the git pre-commit hook, so formatting is on you; Opus makes the commit after review.)
+
+**Write a completion report** as your final step: create `.opencode/handoff/<plan-basename>.report.md` using the format in `docs/workflow.md` (status · per-task checklist · pasted real verification output · files touched · deviations · anything that needs Opus). Gitignored — this is how Opus reviews, not chat.

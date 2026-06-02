@@ -43,6 +43,22 @@ Tasks cross the Opus↔opencode boundary as **files**. One task goes fully throu
 
 - `docs/specs/<YYYY-MM-DD>-<topic>.md` — the *what / why* (from brainstorm).
 - `docs/plans/<YYYY-MM-DD>-<topic>.md` — ordered **tasks** (from writing-plans).
+- `.opencode/handoff/<YYYY-MM-DD>-<topic>.report.md` — the worker's **completion report** (transient, gitignored). Opus reads this + `git diff` to review, then discards it on integrate. So Opus never relies on chat copy-paste.
+
+**Report format** (`implement`/`ui` write it as their final step; `review` writes a sibling `…review.md`):
+
+```
+# <plan> — Worker Report (<agent>)
+## Status: complete | partial | blocked
+## Tasks
+- [x] Task 1 … done
+- [ ] Task 6 … text files done; Xcode GUI pending Opus
+## Verification (paste real output)
+dart format · flutter analyze · custom_lint · flutter test · build_runner
+## Files touched
+## Deviations from plan (what + why)
+## Needs Opus / blockers
+```
 - **Each task block is self-contained** and includes:
   - **Title + role** (`ui`/`implement`/`build`)
   - **Goal** (1–2 lines)

@@ -53,3 +53,10 @@ skills-lock.json
 
 # Plugin-managed skills (caveman, etc.) — not vendored
 .agents/skills/caveman/
+
+# Per-flavor dart-define config (secrets) — keep config/example.json committed
+/config/dev.json
+/config/prod.json
+
+# Worker handoff reports — transient; Opus reads then discards
+/.opencode/handoff/

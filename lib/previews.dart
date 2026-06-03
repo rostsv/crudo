@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'domain/shared/enums.dart';
+import 'domain/shared/macros.dart';
 import 'ui/core/themes/colors.dart';
 import 'ui/core/themes/theme.dart';
 import 'ui/core/themes/dimensions.dart';
@@ -90,7 +91,19 @@ class _PreviewHome extends StatelessWidget {
                 child: MealCard(
                   title: 'Meal — ${status.name}',
                   timeLabel: '08:00',
-                  kcalLabel: '420 kcal',
+                  mealTypeLabel: 'Breakfast',
+                  macros: const Macros(
+                    protein: 32,
+                    carbs: 45,
+                    fats: 12,
+                    kcal: 420,
+                  ),
+                  ingredientNames: const [
+                    'Egg, whole',
+                    'Greek Yogurt',
+                    'Oats, dry',
+                    'Blueberries',
+                  ],
                   status: status,
                 ),
               ),
@@ -100,10 +113,12 @@ class _PreviewHome extends StatelessWidget {
             const SizedBox(height: Spacing.md),
             const Center(
               child: MacroRing(
-                protein: 120,
-                carbs: 200,
-                fats: 60,
-                centerLabel: '2 040',
+                value: 0.62,
+                center: Icon(
+                  Icons.local_fire_department_outlined,
+                  size: IconSizes.lg,
+                  color: CrudoPalette.primary,
+                ),
               ),
             ),
             const SizedBox(height: Spacing.lg),
@@ -115,6 +130,7 @@ class _PreviewHome extends StatelessWidget {
               onPressed: () => showCrudoSheet<void>(
                 context,
                 builder: (_) => const SheetScaffold(
+                  label: 'Preview',
                   title: 'Demo',
                   body: Center(child: Text('Sheet content')),
                 ),
@@ -125,8 +141,22 @@ class _PreviewHome extends StatelessWidget {
             const Text('Toast', style: CrudoText.headline),
             const SizedBox(height: Spacing.md),
             PrimaryCta(
-              label: 'Show toast',
-              onPressed: () => showCrudoToast(context, 'Preview toast!'),
+              label: 'Show success toast',
+              onPressed: () => showCrudoToast(
+                context,
+                'Plan created',
+                body: 'Mon–Fri, 4 meals a day.',
+              ),
+            ),
+            const SizedBox(height: Spacing.sm),
+            PrimaryCta(
+              label: 'Show error toast',
+              onPressed: () => showCrudoToast(
+                context,
+                'Schedule conflict',
+                body: 'Two plans on the same day.',
+                kind: ToastKind.error,
+              ),
             ),
             const SizedBox(height: Spacing.lg),
           ],

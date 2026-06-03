@@ -100,14 +100,57 @@ No traditional drop shadows — depth via **tonal layering** and **ambient diffu
 
 ---
 
-## 5. Spacing, Layout & Radius
+## 5. Dimensional System (strict)
+
+**The 4px grid is law.** Every padding, gap, size, radius, and offset is a multiple of 4px, expressed through a named token — never a raw number. The prototype is a *sketch*, not a spec: where it shows `18px` the system says `md 16`; where it shows `3px` the system says `xs 4`. **Snap to the system, never copy raw px.**
+
+Source-of-truth chain: this section defines the system → `lib/ui/core/themes/dimensions.dart` implements it → the prototype (`app.css`/JSX) informs *composition and fields only*. Colors and type stay locked from `app.css`.
+
+### Spacing (paddings & gaps)
+
+`xs 4` · `sm 8` · `md 16` · `lg 24` · `xl 32` · `xxl 48` — the **only** values allowed for padding, gaps, and offsets (compose for larger: toast offset = `2 × xxl`). Dart: `Spacing.*`.
+
+**Rhythm:** label → `sm` → content; card → `md` → card; major section → `lg`/`xl`. Sticky CTA: `lg` above, `md` below.
+
+### Icon sizes
+
+`sm 16` (dismiss/dense) · `md 20` (inline default) · `lg 24` (nav) · `xl 32` (feature). Dart: `IconSizes.*`. No other icon sizes.
+
+### Corner radius
+
+`sm 12` · `md 20` · `lg 32` · `xl 48` · `full 9999`. Dart: `Radii.*`. All cards use `lg` or `xl`.
+
+### Component sizes
+
+Component-intrinsic dimensions are **named constants in the widget**, must sit on the 4px grid, and get recorded here once locked:
+
+| Component | Size |
+|---|---|
+| Meal status circle | 36 |
+| Meal time-bar | 4 × 44 |
+| Macro ring (default) | 72 |
+| Sheet grabber | 40 × 4 |
+| Toggle | 48 × 28 |
+| Check circle | 28 |
+| Avatar | 96 |
+| Primary CTA min-height | 56 |
+
+### Strokes — the only off-grid values
+
+Painted stroke widths may be 1–3px: macro ring 2–2.5 · status glyph 2 · ghost ring 1.5 · input underline 2. Strokes are `CustomPaint`/decoration strokes, **never `Border`** (no-line rule; enforced by test).
+
+### Hit targets
+
+Interactive elements ≥ 44×44 effective — pad small visuals (dismiss icons, steppers) to reach it.
+
+### Layout
 
 - **Frame:** 390 × 844 (primary), responsive to smaller phones.
-- **Content padding:** `24px` horizontal. Asymmetric margins encouraged for editorial feel (e.g. `32px` left / `16px` right).
-- **Spacing scale:** `xs 4` · `sm 8` · `md 16` · `lg 24` · `xl 32` · `2xl 48`.
-- **Rhythm:** label → `sm` → content; card → `md` → card; major section → `lg`/`xl`. Sticky CTA: `lg` above, `md` below.
+- **Content padding:** `lg 24` horizontal. Asymmetric margins encouraged for editorial feel (`xl 32` left / `md 16` right).
 
-**Corner radius:** `sm 0.75rem` · `md 1.25rem` · `lg 2rem` · `xl 3rem` · `full 9999px`. All cards use `lg` or `xl`.
+### Adding a size
+
+No fitting token? Add it to `dimensions.dart` **and** this section in the same change — never inline a raw number in a widget.
 
 ---
 
@@ -119,7 +162,7 @@ No traditional drop shadows — depth via **tonal layering** and **ambient diffu
 - **Tertiary/Ghost:** text-only, `primary` color, label style (all-caps tracked). For "I already have an account", "Restore purchase", "← Back".
 
 ### Selection cards
-Large rounded rectangles (`lg` radius), white fill on beige, center-aligned icon + title + subtitle, min-height 80px. Unselected: white, no border. Selected: 2px teal border + subtle teal tint. Used for goals (Cut/Maintain/Bulk), meal counts.
+Large rounded rectangles (`lg` radius), white fill on beige, center-aligned icon + title + subtitle, min-height 80px. Unselected: white. Selected: `primary-container` tint — surface-tone shift only, **no border, ever** (no-line rule). Used for goals (Cut/Maintain/Bulk), meal counts.
 
 ### Pill selectors
 `full` radius, side-by-side, equal width. Unselected: outline/`surface` fill. Selected: `primary` fill, white text. Used for Grams/Ounces, Fixed/Flexible.
@@ -165,7 +208,7 @@ Wordmark anchored top (centered on intro screens, top-left on setup). Subtle X-c
 
 ## 8. Iconography
 
-Light stroke weight (1–1.5px) to match Manrope. Consistent family (Phosphor Light / Lucide / custom). Sizes: 20px inline, 24px nav, 32px feature. Color: `primary` for active/accent, `on-surface-mut` for neutral. Icon badges: icon centered in a teal-tinted circle (`primary-container`, ~40px).
+Light stroke weight (1–1.5px) to match Manrope. Consistent family (Phosphor Light / Lucide / custom). Sizes from `IconSizes` only: `sm 16` dense · `md 20` inline · `lg 24` nav · `xl 32` feature (§5). Color: `primary` for active/accent, `on-surface-mut` for neutral. Icon badges: icon centered in a teal-tinted circle (`primary-container`, 40px).
 
 ---
 

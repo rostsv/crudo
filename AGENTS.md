@@ -9,8 +9,8 @@ Flutter app, early implementation. `lib/main.dart` is still a placeholder (no pr
 - `docs/product.md` -- what to build, MVP scope, onboarding flow
 - `docs/design_system.md` -- visual principles
 - `docs/architecture.md` -- stack, domain model, folder layout, conventions
-- `docs/design/prototype/app.css` -- **locked design tokens (authoritative)**
-- `docs/design/prototype/screens/*.jsx` -- pixel-perfect visual target (Flutter, not JSX)
+- `docs/design/prototype/app.css` -- **locked color + type tokens (authoritative)**
+- `docs/design/prototype/screens/*.jsx` -- visual *sketch*: composition + fields to show; dimensions always snap to the design system (`design_system.md §5`)
 - `docs/workflow.md` -- the brainstorm→plan→delegate→review→integrate loop
 
 **Resume protocol:** `git log` / `git status` → newest plan in `docs/plans/` → first unchecked task → its spec → skills → implement.
@@ -81,8 +81,9 @@ Quantities stored in **grams** (displayed g/oz per user pref). Calories auto-cal
 
 ## Design system (non-negotiable)
 
-`docs/design/prototype/app.css` is the **authoritative token source** -- where it differs from `design_system.md`, trust `app.css`.
+`docs/design/prototype/app.css` is the **authoritative source for colors and type** -- where it differs from `design_system.md`, trust `app.css`. For **dimensions** the roles flip: `design_system.md §5` is law, the prototype is only a sketch.
 
+- **Dimensional system (strict):** every dimension sits on the 4px grid. Paddings/gaps only from `Spacing`, icons only from `IconSizes`, radii only from `Radii` (`lib/ui/core/themes/dimensions.dart`). Component-intrinsic sizes = named widget constants on the grid, recorded in `design_system.md §5`. **Never copy raw px from the prototype — snap to the nearest token** (18→16, 3→4, 22→24). New size = new token in `dimensions.dart` + doc entry, same change. Only painted stroke widths (1–3px) may live off-grid.
 - **No-line rule:** no 1px borders, no horizontal dividers. Use surface-color shifts + vertical padding.
 - **No drop shadows:** tonal layering only. Floating elements get Cloud Shadow `0 20px 40px rgba(26,28,26,0.04)` + optional glassmorphism `blur(20px)`.
 - **Never pure black** -- high-contrast text is `#1a1c1a`.

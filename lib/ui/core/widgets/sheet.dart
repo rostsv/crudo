@@ -18,16 +18,21 @@ Future<T?> showCrudoSheet<T>(
   );
 }
 
-/// Standard sheet layout: pill handle, title, body, optional sticky CTA.
+/// Standard sheet layout: pill handle, optional kicker label, left-aligned
+/// title, body, optional sticky CTA.
 class SheetScaffold extends StatelessWidget {
   const SheetScaffold({
     required this.title,
     required this.body,
+    this.label,
     this.cta,
     super.key,
   });
 
   final String title;
+
+  /// Uppercase kicker above the title, e.g. "Commitment".
+  final String? label;
   final Widget body;
   final Widget? cta;
 
@@ -51,8 +56,8 @@ class SheetScaffold extends StatelessWidget {
           children: [
             Center(
               child: Container(
-                width: 40,
-                height: 4,
+                width: 40, // grabber, 4px grid
+                height: dim.Spacing.xs,
                 decoration: BoxDecoration(
                   color: colors.surfaceHighest,
                   borderRadius: dim.Radii.all(dim.Radii.full),
@@ -60,11 +65,11 @@ class SheetScaffold extends StatelessWidget {
               ),
             ),
             const SizedBox(height: dim.Spacing.md),
-            Text(
-              title,
-              style: CrudoText.headlineSm,
-              textAlign: TextAlign.center,
-            ),
+            if (label != null) ...[
+              Text(label!.toUpperCase(), style: CrudoText.label),
+              const SizedBox(height: dim.Spacing.xs),
+            ],
+            Text(title, style: CrudoText.headline),
             const SizedBox(height: dim.Spacing.md),
             Flexible(child: body),
             if (cta != null) ...[const SizedBox(height: dim.Spacing.lg), cta!],

@@ -17,6 +17,7 @@ void main() {
               onPressed: () => showCrudoSheet<void>(
                 context,
                 builder: (_) => SheetScaffold(
+                  label: 'Commitment',
                   title: 'Snooze',
                   body: const Text('Pick a delay'),
                   cta: PrimaryCta(label: 'Confirm', onPressed: () {}),
@@ -30,6 +31,7 @@ void main() {
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
+    expect(find.text('COMMITMENT'), findsOneWidget);
     expect(find.text('Snooze'), findsOneWidget);
     expect(find.text('Pick a delay'), findsOneWidget);
     expect(find.text('Confirm'), findsOneWidget);

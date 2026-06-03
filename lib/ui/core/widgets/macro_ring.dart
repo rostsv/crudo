@@ -3,26 +3,35 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../themes/colors.dart';
-import '../themes/typography.dart';
 
-/// Macro distribution ring. Arc lengths are proportional to kcal share
-/// (protein×4 : carbs×4 : fats×9). Colors: protein=primary (teal),
-/// carbs=gold, fats=primary-soft.
+/// Macro-progress ring: a thin single-value arc over a muted track
+/// (design system: "thin 2px strokes, never heavy donuts"). [value] is the
+/// 0–1 progress share (clamped); [center] floats in the middle (icon, kcal
+/// label). Macro P/C/F split renders as slim Progress bars, not this ring.
 class MacroRing extends StatelessWidget {
   const MacroRing({
-    required this.protein,
-    required this.carbs,
-    required this.fats,
-    this.centerLabel,
-    this.size = 120,
+    required this.value,
+    this.size = 72,
+    this.strokeWidth = 2.5,
+    this.color,
+    this.trackColor,
+    this.center,
     super.key,
   });
 
-  final double protein;
-  final double carbs;
-  final double fats;
-  final String? centerLabel;
+  /// Progress share, clamped to 0–1.
+  final double value;
   final double size;
+  final double strokeWidth;
+
+  /// Arc color; defaults to primary teal.
+  final Color? color;
+
+  /// Track color; defaults to the outline ghost tone.
+  final Color? trackColor;
+
+  /// Centered overlay (icon or label).
+  final Widget? center;
 
   @override
   Widget build(BuildContext context) {
@@ -31,17 +40,12 @@ class MacroRing extends StatelessWidget {
       dimension: size,
       child: CustomPaint(
         painter: _RingPainter(
-          proteinKcal: protein * 4,
-          carbsKcal: carbs * 4,
-          fatsKcal: fats * 9,
-          proteinColor: colors.primary,
-          carbsColor: colors.gold,
-          fatsColor: colors.primarySoft,
-          trackColor: colors.surfaceHigh,
+          value: value.clamp(0, 1).toDouble(),
+          color: color ?? colors.primary,
+          trackColor: trackColor ?? colors.outline,
+          strokeWidth: strokeWidth,
         ),
-        child: centerLabel == null
-            ? null
-            : Center(child: Text(centerLabel!, style: CrudoText.headlineSm)),
+        child: center == null ? null : Center(child: center),
       ),
     );
   }
@@ -49,63 +53,42 @@ class MacroRing extends StatelessWidget {
 
 class _RingPainter extends CustomPainter {
   const _RingPainter({
-    required this.proteinKcal,
-    required this.carbsKcal,
-    required this.fatsKcal,
-    required this.proteinColor,
-    required this.carbsColor,
-    required this.fatsColor,
+    required this.value,
+    required this.color,
     required this.trackColor,
+    required this.strokeWidth,
   });
 
-  final double proteinKcal;
-  final double carbsKcal;
-  final double fatsKcal;
-  final Color proteinColor;
-  final Color carbsColor;
-  final Color fatsColor;
+  final double value;
+  final Color color;
   final Color trackColor;
-
-  static const _gap = 0.06; // radians between segments
+  final double strokeWidth;
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
-    final radius = size.shortestSide / 2 - 6;
-    final rect = Rect.fromCircle(center: center, radius: radius);
+    final radius = (size.shortestSide - strokeWidth) / 2;
     Paint stroke(Color color) => Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 12
+      ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
     canvas.drawCircle(center, radius, stroke(trackColor));
-
-    final total = proteinKcal + carbsKcal + fatsKcal;
-    if (total <= 0) return;
-
-    var start = -math.pi / 2;
-    for (final (kcal, color) in [
-      (proteinKcal, proteinColor),
-      (carbsKcal, carbsColor),
-      (fatsKcal, fatsColor),
-    ]) {
-      if (kcal <= 0) continue;
-      final sweep = (kcal / total) * 2 * math.pi - _gap;
-      canvas.drawArc(
-        rect,
-        start + _gap / 2,
-        math.max(sweep, 0.01),
-        false,
-        stroke(color),
-      );
-      start += (kcal / total) * 2 * math.pi;
-    }
+    if (value <= 0) return;
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2, // start at 12 o'clock
+      value * 2 * math.pi,
+      false,
+      stroke(color),
+    );
   }
 
   @override
   bool shouldRepaint(_RingPainter old) =>
-      old.proteinKcal != proteinKcal ||
-      old.carbsKcal != carbsKcal ||
-      old.fatsKcal != fatsKcal;
+      old.value != value ||
+      old.color != color ||
+      old.trackColor != trackColor ||
+      old.strokeWidth != strokeWidth;
 }

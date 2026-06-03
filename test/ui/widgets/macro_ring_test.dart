@@ -9,25 +9,23 @@ Widget _wrap(Widget child) => MaterialApp(
 );
 
 void main() {
-  testWidgets('paints and shows center label', (tester) async {
+  testWidgets('paints and shows the center overlay', (tester) async {
     await tester.pumpWidget(
-      _wrap(
-        const MacroRing(
-          protein: 120,
-          carbs: 200,
-          fats: 60,
-          centerLabel: '2 040',
-        ),
-      ),
+      _wrap(const MacroRing(value: 0.62, center: Text('2 040'))),
     );
     expect(find.byType(CustomPaint), findsWidgets);
     expect(find.text('2 040'), findsOneWidget);
   });
 
-  testWidgets('all-zero input still renders (track only)', (tester) async {
-    await tester.pumpWidget(
-      _wrap(const MacroRing(protein: 0, carbs: 0, fats: 0)),
-    );
+  testWidgets('zero value still renders (track only)', (tester) async {
+    await tester.pumpWidget(_wrap(const MacroRing(value: 0)));
+    expect(find.byType(MacroRing), findsOneWidget);
+  });
+
+  testWidgets('out-of-range values render without error', (tester) async {
+    await tester.pumpWidget(_wrap(const MacroRing(value: 1.7)));
+    expect(find.byType(MacroRing), findsOneWidget);
+    await tester.pumpWidget(_wrap(const MacroRing(value: -0.3)));
     expect(find.byType(MacroRing), findsOneWidget);
   });
 }

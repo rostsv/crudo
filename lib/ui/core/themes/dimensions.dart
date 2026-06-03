@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
+/// All dimensions sit on a 4px grid. Paddings/gaps come from [Spacing],
+/// icons from [IconSizes]; component-intrinsic sizes (circles, bars) are
+/// named widget constants that still snap to the grid.
 abstract final class Spacing {
   static const double xs = 4, sm = 8, md = 16, lg = 24, xl = 32, xxl = 48;
+}
+
+abstract final class IconSizes {
+  static const double sm = 16, md = 20, lg = 24, xl = 32;
 }
 
 abstract final class Radii {

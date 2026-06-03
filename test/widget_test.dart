@@ -12,23 +12,26 @@ Widget _wrap(Flavor flavor) => ProviderScope(
 );
 
 void main() {
-  testWidgets('boots into themed Crudo wordmark', (tester) async {
+  testWidgets('boots into Today tab', (tester) async {
     await tester.pumpWidget(_wrap(Flavor.prod));
+    await tester.pumpAndSettle();
 
-    expect(find.text('Crudo'), findsOneWidget);
+    expect(find.text('Today'), findsWidgets);
 
-    final ctx = tester.element(find.text('Crudo'));
+    final ctx = tester.element(find.text('Today').first);
     check(Theme.of(ctx).colorScheme.primary).equals(const Color(0xFF004D49));
     check(Theme.of(ctx).extension<CrudoColors>()).isNotNull();
   });
 
   testWidgets('prod build shows no dev marker', (tester) async {
     await tester.pumpWidget(_wrap(Flavor.prod));
+    await tester.pumpAndSettle();
     expect(find.text('Crudo Dev'), findsNothing);
   });
 
   testWidgets('dev build shows the dev marker', (tester) async {
     await tester.pumpWidget(_wrap(Flavor.dev));
+    await tester.pumpAndSettle();
     expect(find.text('Crudo Dev'), findsOneWidget);
   });
 }

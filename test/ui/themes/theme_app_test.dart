@@ -17,8 +17,9 @@ void main() {
         child: const CrudoApp(),
       ),
     );
+    await tester.pumpAndSettle();
 
-    final ctx = tester.element(find.text('Crudo'));
+    final ctx = tester.element(find.text('Today').first);
     final theme = Theme.of(ctx);
     expect(theme.colorScheme.primary, const Color(0xFF004D49));
     expect(theme.extension<CrudoColors>()!.gold, const Color(0xFFE9B949));

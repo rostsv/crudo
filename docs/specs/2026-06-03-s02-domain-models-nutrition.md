@@ -79,7 +79,9 @@ All freezed unless noted; **no JSON anywhere**; lists `@Default([])`.
 
 ## Validation (two-tier, in domain)
 **Tier 1 — invariants** (`@Assert` / ctor asserts; debug guards for impossible states):
-`MealTime` 0–1439 · `Grams > 0` · `Product`/`MealProduct` macros `>= 0` · `PlanTemplate` each day `0..6` · `Day` `date.isUtc` & midnight, `(adherence==null)==(state==null)`, `adherence ∈ [0,1]` · `Prefs.preMin >= 0` · `Streak` `current>=0`, `personalBest>=current`.
+`MealTime` 0–1439 · `Grams > 0` · `Product`/`MealProduct` macros `>= 0` · `Day` `date.isUtc` & midnight, `(adherence==null)==(state==null)`, `adherence ∈ [0,1]` · `Prefs.preMin >= 0` · `Streak` `current>=0`, `personalBest>=current`.
+
+> **Const-assert limitation (discovered in implementation):** Dart const-constructor asserts allow only potentially-constant expressions — no property/method access on params (`date.isUtc`, `days.every(...)`). Resolution: `Day` uses a **non-const factory** (a const `Day` is impossible anyway — `DateTime` is never const-creatable), keeping its asserts. `PlanTemplate` stays const (const construction is used), so its weekday-range rule moved to Tier-2 as `invalidWeekday`.
 
 **Tier 2 — `validate() → List<ValidationIssue>`** (extension methods in `validation/validators.dart`; called at save; never throws; mid-edit drafts allowed):
 | Type | Rules |
@@ -87,12 +89,12 @@ All freezed unless noted; **no JSON anywhere**; lists `@Default([])`.
 | `Product`/`MealProduct` | name non-blank · `kcalOverride` (if set) ≥0 **and within ±10 %** of calculated · `protein+carbs+fats ≤ 100` per-100g (**±1 g tolerance**) |
 | `MealTemplate`/`Meal` | name non-blank · ≥ 1 product |
 | `PlanSlot` | `mealTemplateId` non-blank |
-| `PlanTemplate` | name non-blank · days unique · ≥ 1 slot when `active` |
+| `PlanTemplate` | name non-blank · days unique · each day `∈ 0..6` (`invalidWeekday`) · ≥ 1 slot when `active` |
 | `Day` | unique meal ids |
 | `Prefs` | `streakThreshold ∈ {70,80,90,100}` · `dailyKcalTarget` (if set) > 0 · `preMin ≤ 240` |
 | `UserProfile` | id non-blank |
 
-`ValidationIssue { field, ValidationCode code, message }`; `ValidationCode` enum (`blankName`, `kcalOverrideOutOfRange`, `macroMassExceeded`, `emptyMeal`, `emptyActivePlan`, `invalidThreshold`, `nonPositiveTarget`, `duplicateMealId`, `duplicateWeekday`, `blankMealTemplateId`, `preMinTooLarge`, `blankId`). UI maps codes → localized text.
+`ValidationIssue { field, ValidationCode code, message }`; `ValidationCode` enum (`blankName`, `kcalOverrideOutOfRange`, `macroMassExceeded`, `emptyMeal`, `emptyActivePlan`, `invalidThreshold`, `nonPositiveTarget`, `duplicateMealId`, `duplicateWeekday`, `invalidWeekday`, `blankMealTemplateId`, `preMinTooLarge`, `blankId`). UI maps codes → localized text.
 
 ## Nutrition domain service (`domain/services/nutrition.dart` — pure)
 - `calculatedKcal({protein, carbs, fats})` → `p*4 + c*4 + f*9`

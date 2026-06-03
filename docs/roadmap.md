@@ -14,7 +14,7 @@ Status legend: ✅ done · ◻ not started.
 |---|---|---|---|---|
 | ✅ | Design system / theme | ui | — | committed (`8ce6d77`) |
 | ✅ | App scaffold + config (S01) | — | theme | flavors, `AppConfig`/`appConfigProvider`, `ProviderScope`, themed boot. Done `a41ae20` (iOS Xcode flavor GUI still pending; codegen deferred to S02). |
-| S02 | Domain models + nutrition math | logic | S01 | freezed models + enums; `utils/` calc (`p×4+c×4+f×9`), ±10% validator, day/date helpers. **Also owns codegen setup** (deferred from S01): add `build_runner`/`freezed`/`riverpod_generator`/`json_serializable`, resolve the analyzer/`meta`-pin conflict on Flutter 3.41.9, set the generated-file commit policy. `custom_lint`/`riverpod_lint` stay deferred until they support analyzer ≥10. |
+| ✅ | Domain models + nutrition math (S02) | logic | S01 | Done `b071912`. Pure DDD domain (aggregate modules, VOs, two-tier validation, nutrition service), serialization-free (DTOs → S20, **no json_serializable**); freezed-only codegen (no `meta` conflict — resolved clean); architecture test enforces the dependency rule. Spec: `2026-06-03-s02-*`. `riverpod_generator` → S05+; `custom_lint`/`riverpod_lint` still deferred (analyzer ≥10). |
 | S03 | Data layer (local repos + seed) | logic | S02 | repos as **async, per-user-scoped** providers; in-memory + bundled seed; `local_food_service`. Backend-shaped contract. |
 | S04 | Routing shell + core widgets | ui | S01 | `StatefulShellRoute` 4 tabs, sheet/route infra, shared widgets (PrimaryCta, SelectionCard, Pill, MealCard, MacroRing, SheetScaffold, Toast). |
 

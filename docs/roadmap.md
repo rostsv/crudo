@@ -15,7 +15,7 @@ Status legend: ✅ done · ◻ not started.
 | ✅ | Design system / theme | ui | — | committed (`8ce6d77`) |
 | ✅ | App scaffold + config (S01) | — | theme | flavors, `AppConfig`/`appConfigProvider`, `ProviderScope`, themed boot. Done `a41ae20` (iOS Xcode flavor GUI still pending; codegen deferred to S02). |
 | ✅ | Domain models + nutrition math (S02) | logic | S01 | Done `b071912`. Pure DDD domain (aggregate modules, VOs, two-tier validation, nutrition service), serialization-free (DTOs → S20, **no json_serializable**); freezed-only codegen (no `meta` conflict — resolved clean); architecture test enforces the dependency rule. Spec: `2026-06-03-s02-*`. `riverpod_generator` → S05+; `custom_lint`/`riverpod_lint` still deferred (analyzer ≥10). |
-| S03 | Data layer (local repos + seed) | logic | S02 | repos as **async, per-user-scoped** providers; in-memory + bundled seed; `local_food_service`. Backend-shaped contract. |
+| ✅ | Data layer (local repos + seed) (S03) | logic | S02 | Done `3d8e0fc`. Repo interfaces in `domain/repositories/` (Futures + watch streams); reactive in-memory impls; 63-product seed (DTO+mapper, no codegen); uuid-v7 `IdGenerator`; DI in `config/di.dart` (S20 swap point). Spec: `2026-06-03-s03-*`. |
 | S04 | Routing shell + core widgets | ui | S01 | `StatefulShellRoute` 4 tabs, sheet/route infra, shared widgets (PrimaryCta, SelectionCard, Pill, MealCard, MacroRing, SheetScaffold, Toast). |
 
 ## Phase 1 — Daily loop

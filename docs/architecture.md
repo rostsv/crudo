@@ -14,7 +14,7 @@ Conventions and tooling below are **set by the project skills** in `.agents/skil
 - **Fonts:** Manrope (bundle as an app font; see `design_system.md`).
 - **State management:** **Riverpod 3.x** (annotation-based: `@riverpod`, `Notifier`, `AsyncNotifier`). App wrapped in `ProviderScope` at the root. Controllers hold all business logic; widgets are `ConsumerWidget`s that `ref.watch` state and `ref.read` methods. **DI is via Riverpod providers** (`Provider` for repository instances — no separate `get_it`/`provider`). Deps: `flutter_riverpod`, `riverpod_annotation`, `riverpod_generator`, `riverpod_lint`, `build_runner`. **Phasing (2026-06-02):** S01 installs `flutter_riverpod` only (plain `Provider`); the **codegen toolchain** (`build_runner`, `riverpod_generator`/`riverpod_annotation`, `freezed`, `json_serializable`) is added in **S02** with the first freezed model — on Flutter 3.41.9 it requires resolving an analyzer/`meta`-pin conflict. **`custom_lint`/`riverpod_lint` are deferred** (custom_lint caps `analyzer ^8`, incompatible with the Riverpod-3.x/analyzer-10+ stack); lint = `flutter_lints` + `@review` until custom_lint catches up. (skills: `flutter-riverpod-arch`, `flutter-apply-architecture-best-practices`)
 - **Routing:** `go_router` with `StatefulShellRoute.indexedStack` for the persistent 4-tab bottom nav; `usePathUrlStrategy()`. (skill: `flutter-setup-declarative-routing`)
-- **Domain models:** immutable, generated with `freezed`/`built_value`. JSON mapping via `fromJson`/`toJson` (skill: `flutter-implement-json-serialization`).
+- **Domain models:** immutable `freezed` types, **serialization-free** (no `fromJson`/`toJson` in `domain/` — decision 2026-06-03). Wire shapes live as DTOs + mappers in `data/` from S20 (skill: `flutter-implement-json-serialization` applies to DTOs). Domain imports no Flutter/Riverpod/Supabase.
 - **Testing:** unit with `package:test`; widgets with `WidgetTester` (`flutter_test`); flows with `integration_test`; mocks via `package:mockito` + `build_runner`. Assertions use **`package:checks`** (not `package:matcher`). Coverage via the `coverage` package → LCOV. (skills: `dart-add-unit-test`, `flutter-add-widget-test`, `flutter-add-integration-test`, `dart-generate-test-mocks`, `dart-migrate-to-checks-package`, `dart-collect-coverage`)
 - **Quality:** `dart analyze` + `dart fix --apply`; prefer switch-expressions/pattern-matching. (skills: `dart-run-static-analysis`, `dart-use-pattern-matching`)
 - **UI previews:** `previews.dart` widget-preview system for components. (skill: `flutter-add-widget-preview`)
@@ -31,12 +31,16 @@ Build/lint/test commands live in `CLAUDE.md`. The full skill catalog is listed i
 
 ## 2. Project structure
 
-**Layered MVVM with a hybrid layout** (UI grouped by feature, data/domain grouped by type) per `flutter-apply-architecture-best-practices`, with **Riverpod** as the state layer per `flutter-riverpod-arch`. Dependencies flow one direction only:
+**"Riverpod MVVM + shared DDD core" (locked 2026-06-03):** hybrid layout — UI grouped by feature, **domain/data shared and grouped by type** — per the Flutter Compass case study, with **Riverpod** as state layer + DI, and **DDD tactical patterns inside the domain** (aggregate modules, value objects, self-validation, domain services, repository interfaces). Single bounded context — the domain is cohesive and shared; no per-feature domain. Dependencies flow one direction only:
 
 ```
-View (ConsumerWidget) → Controller (Notifier/AsyncNotifier) → Repository → Service
-                                          ↑ (optional UseCase between controller and repository)
+View (ConsumerWidget) → Controller (Notifier/AsyncNotifier) → Repository (interface) → data Service
+ui → application (emergent use-cases) → domain ← data (implements domain's repo interfaces)
+domain depends on NOTHING (no Flutter / Riverpod / JSON / Supabase imports)
+utils = generic technical helpers only — never business rules
 ```
+
+Spring mapping (for orientation): Notifier ≈ `@Service` entry point, Repository ≈ `@Repository`, data service ≈ the `EntityManager`/`WebClient`-level client. Rules live on **aggregates** (rich domain), not in fat services.
 
 > **Reconciling the two architecture skills.** They disagree on folders (`flutter-riverpod-arch` wants `lib/features/<f>/{application,presentation,infrastructure}`). We keep the **layer-first** structure (official Flutter guide + the practices skill) because Crudo's repositories are shared across many features, and adopt **Riverpod** for state. Mapping: the riverpod skill's `application/` → our `view_models/`, `presentation/` → our `views/`, `infrastructure/` → our central `data/`. Where the two conflict, **layout follows the practices skill; state-management patterns follow the riverpod skill.**
 
@@ -53,17 +57,22 @@ lib/
 ├── main.dart                      # + main_development.dart / main_staging.dart per flavor
 ├── config/                        # env config, flavors, DI wiring, API keys (indirection)
 ├── routing/                       # go_router: StatefulShellRoute (4 tabs) + pushed routes + sheets (see §5)
-├── utils/                         # nutrition math, date/day helpers, validators (e.g. 10% kcal rule)
-├── domain/
-│   └── models/                    # Food, Meal, MealIngredient, Plan, LoggedDay, UserProfile,
-│                                  # Preferences, Streak + enums (MealStatus, MealTag,
-│                                  # FoodCategory, Goal, ReminderMode) — freezed/immutable
-├── data/
-│   ├── repositories/              # food_, meal_, plan_, day_ (today/history),
-│   │                              # auth_, profile_, subscription_ repository.dart
-│   ├── services/                  # auth_, database_, local_food_ (bundled list),
-│   │                              # notification_, billing_ service.dart
-│   └── models/                    # API/DTO models (only where they differ from domain)
+├── utils/                         # GENERIC technical helpers only (calendar math) — no business rules
+├── domain/                        # PURE Dart: no Flutter/Riverpod/JSON/Supabase (S02 spec is canonical)
+│   ├── product/  meal/  plan/     # aggregate modules: entities + (later) behavior methods
+│   ├── day/  profile/  streak/    #   templates: Product, ProductRef, MealTemplate, PlanSlot, PlanTemplate
+│   │                              #   instances (detached snapshots): Day, Meal, MealProduct
+│   ├── shared/                    # value objects (MealTime, Macros, Grams) + enums
+│   ├── services/                  # domain services (pure): nutrition; later meal_status (S05), adherence (S12)
+│   ├── validation/                # ValidationIssue + validate() extensions (two-tier with @Assert)
+│   └── repositories/              # ABSTRACT repo interfaces (defined in S03)
+├── application/                   # use-cases — EMERGENT only (logic spanning ≥2 repos); else controllers
+├── data/                          # implements domain contracts
+│   ├── repositories/              # impls: in-memory (S03) → Supabase (S20), per-user scoped
+│   ├── services/                  # one wrapper per external system: seed (S03), database (S20),
+│   │                              # notification (S14), auth (S22), billing (S23)
+│   ├── dto/                       # wire shapes (seed DTO S03; Supabase DTOs S20)
+│   └── mappers/                   # dto ↔ domain
 └── ui/
     ├── core/
     │   ├── themes/                # colors, typography, dimensions, shadows from app.css
@@ -101,56 +110,23 @@ Tests mirror the layers: `test/{data,domain,ui,utils}/`. Shared mocks/fakes live
 
 ## 4. Domain model
 
-Quantities stored in **grams** (displayed as g or oz per user pref); macros are **per 100g**. Types below are the MVP model (from the prototype seed, updated to `product.md` decisions).
+> **Canonical type catalog: `docs/specs/2026-06-03-s02-domain-models-nutrition.md`** (redesigned 2026-06-03; supersedes the prototype-seed shapes that used to live here). Diagrams: `docs/design/domain/2026-06-02-s02-domain-diagrams.md`.
 
-### Food (library item)
-```
-Food {
-  id        // 'f1', or 'cf<timestamp>' for custom
-  name
-  cat       // meat | fish | eggs | grain | veg | fruit | oil | custom
-  p, c, f   // protein / carbs / fats per 100g (required)
-  kcal      // per 100g — auto-calculated, optional manual override
-  icon      // category → glyph mapping
-}
-```
-- **Built-in list:** ~50–100 curated whole foods bundled with the app (no external API). Categories: meat & fish, eggs & dairy, grains & legumes, vegetables, fruits, oils & fats.
-- **Custom foods:** user-created; category optional (defaults to `custom`).
+Quantities in **grams** (`Grams` VO, displayed g/oz per pref); macros **per 100 g** (double). IDs = app-generated **uuid v7 strings**. Instants stored **UTC**; day key = the user's **local calendar date** encoded `DateTime.utc(y,m,d)`; midnight-lock at local 00:00.
 
-### Meal
-```
-Meal {
-  id, time, name
-  tags[]    // Breakfast | Lunch | Dinner | Snack | Pre-workout | Post-workout (multiple)
-  ingr[]    // [{ fid, g }] — food reference + grams
-  status    // done | partial | upcoming | skipped  (per-day, runtime)
-}
-```
-- Meals are **reusable** — the same meal can appear in multiple plans.
-- Nutrition is **derived**, never stored denormalized (see §6).
+**Two trees:**
 
-### Plan
-```
-Plan {
-  id, name
-  tag             // display, e.g. 'CUT · 2200 KCAL'
-  days[]          // assigned weekdays, 0=Mon … 6=Sun; [] = unassigned
-  active
-  mealIds[]       // ordered meal slots
-  // derived summary: meal count, total kcal, p/c/f
-}
-```
+- **Template tree (the factory; edits affect future only):**
+  `PlanTemplate { name, days[0=Mon…6=Sun], active, slots }` → `PlanSlot { mealTemplateId, time: MealTime }` → `MealTemplate { name, tags, products }` (time-free, reusable) → `ProductRef { productId, grams }` → `Product { name, category, p/c/f per-100g, kcalOverride?, isCustom }`.
+- **Instance tree (detached self-contained snapshots — snapshot-on-schedule, §8):**
+  `Day { date, sourcePlanId?, planName?, meals, adherence?, state? }` → `Meal { id (slot-stable — notifications key off it), time, sourceMealTemplateId?, name, tags, products }` → `MealProduct { sourceProductId?, name, category, p/c/f, kcalOverride?, grams, checked }`.
+  Each day/meal/product is individually editable without touching templates or other days. `source*Id` = weak back-refs only (no integrity dependency). One `Day` type serves today/future/history; `adherence` + `state` (green/yellow/red) are null while open, **frozen at midnight-lock**.
 
-### Prefs (profile/settings)
-```
-Prefs {
-  goal            // Cut | Maintain | Bulk — label only (no kcal target in v1)
-  units           // 'g' | 'oz' (both v1; always stored as grams)
-  streakThreshold // green line: 70 | 80 | 90 | 100 (default 80); red floor fixed at 50
-  preOn, atOn, eodOn, riskOn   // notification toggles
-  preMin          // pre-meal lead minutes
-}
-```
+**Derived, never stored:** `MealStatus` (from checked flags + time — S05), all macro totals (`Macros` VO — §6), plan display tag (profile goal + Σ planned kcal).
+
+**Profile:** `UserProfile { id, displayName?, prefs }` · `Prefs { goal, units, dailyKcalTarget? (guidance only — never the adherence denominator), streakThreshold (70/80/90/100, default 80), reminderMode, preOn/atOn/eodOn/riskOn, preMin }` · `Streak { current, personalBest, lastCountedDay? }`.
+
+**Validation is two-tier, in domain:** `@Assert` invariants (impossible states; debug) + `validate() → List<ValidationIssue>` (user-facing save rules, code enum for i18n). Notable rules: kcal override within **±10 %** of calculated; `p+c+f ≤ 100`/100g (±1 g); ≥1 product per saved meal; ≥1 slot per active plan.
 
 ---
 

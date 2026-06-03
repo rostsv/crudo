@@ -27,9 +27,9 @@ flutter analyze                                         # lint + static analysis
 flutter test                                            # run all tests
 flutter test test/widget_test.dart                      # single test file
 flutter test --name "<substring>"                       # tests matching name
-dart run build_runner build --delete-conflicting-outputs  # codegen: freezed, riverpod (added in S02)
+dart run build_runner build                               # codegen: freezed (build_runner 2.15: no --delete-conflicting-outputs flag)
 ```
-> `config/dev.json` / `config/prod.json` are gitignored — copy `config/example.json` and fill locally. The codegen toolchain (`build_runner`/`freezed`/generators) arrives in S02; see `docs/architecture.md §1`.
+> `config/dev.json` / `config/prod.json` are gitignored — copy `config/example.json` and fill locally. The freezed codegen toolchain is installed (S02); run `dart run build_runner build` after touching any `@freezed` model. JSON codegen is deliberately absent — the domain is serialization-free; DTOs arrive in `data/` at S20.
 
 Environment: Dart SDK `^3.11.5`. Enable pre-commit hook once: `git config core.hooksPath .githooks`.
 
@@ -44,20 +44,27 @@ lib/
 ├── main.dart                     # placeholder; wrapped in ProviderScope when wired
 ├── config/                       # flavors, DI wiring, env config
 ├── routing/                       # go_router with StatefulShellRoute (4 tabs)
-├── utils/                         # nutrition math, validators (kcal 10% rule)
-├── domain/models/                 # freezed immutable models + enums
+├── utils/                         # GENERIC technical helpers only (calendar math) — never business rules
+├── domain/                        # PURE Dart — no Flutter/Riverpod/JSON/Supabase imports, ever
+│   ├── product/ meal/ plan/ day/ profile/ streak/   # aggregate modules (freezed entities)
+│   ├── shared/                    # value objects (MealTime, Macros, Grams) + enums
+│   ├── services/                  # pure domain services (nutrition; meal_status S05; adherence S12)
+│   ├── validation/                # ValidationIssue + validate() extensions (@Assert = tier 1)
+│   └── repositories/              # ABSTRACT repository interfaces (from S03)
+├── application/                   # use-cases — only when logic spans ≥2 repos; else controllers handle it
 ├── data/
-│   ├── repositories/              # single source of truth per type (as Riverpod Providers)
-│   ├── services/                  # stateless wrappers (auth, notifications, etc.)
-│   └── models/                    # API/DTO shapes (separate from domain)
+│   ├── repositories/              # impls of domain interfaces: in-memory (S03) → Supabase (S20)
+│   ├── services/                  # one stateless wrapper per external system (seed, db, notifications…)
+│   ├── dto/                       # wire shapes (never leak past data/)
+│   └── mappers/                   # dto ↔ domain
 └── ui/
     ├── core/{widgets,themes}/     # shared components, tokens from app.css
     └── features/<feature>/
         ├── views/                # ConsumerWidget screens (UI-only logic)
-        └── view_models/          # Riverpod Notifier/AsyncNotifier + providers
+        └── view_models/          # Riverpod Notifier/AsyncNotifier controllers + providers
 ```
 
-**Dependency flow (one-way):** View → Controller (Notifier/AsyncNotifier) → Repository → Service. Views `ref.watch`/`ref.read` controllers; never call Services directly. Repositories never depend on each other.
+**Dependency rule (one-way, the anti-spaghetti guarantee):** View → Controller (Notifier/AsyncNotifier) → Repository (domain interface) → data Service. `ui → application → domain ← data`; **domain depends on nothing**. Views `ref.watch`/`ref.read` controllers; never call Services directly. Repositories never depend on each other. Business rules live on **aggregates/domain services** — not in controllers, not in widgets. A domain file importing `package:flutter`, Riverpod, or Supabase = instant review reject.
 
 ## Core domain invariants (easy to get wrong)
 
@@ -89,7 +96,7 @@ Quantities stored in **grams** (displayed g/oz per user pref). Calories auto-cal
 
 - **State:** Riverpod 3.x (`@riverpod` `Notifier`/`AsyncNotifier` in `view_models/`). No `get_it`/`provider`. Wrap async in `AsyncValue.guard`; use `.select` for fine-grained rebuilds.
 - **Routing:** `go_router` + `StatefulShellRoute.indexedStack` for 4-tab nav.
-- **Models:** `freezed` immutable; JSON via `fromJson`/`toJson`.
+- **Models:** `freezed` immutable, **serialization-free domain** (no `fromJson`/`toJson` in `lib/domain/` — wire shapes are DTOs in `data/dto/` from S20). Canonical domain catalog: `docs/specs/2026-06-03-s02-domain-models-nutrition.md`.
 - **Tests:** `package:test`, `WidgetTester`, `integration_test`; mocks via `mockito` + `build_runner`; assertions via **`package:checks`** (not `matcher`); coverage via `coverage`. Controllers tested with `ProviderContainer`.
 - **Codegen output:** `*.g.dart` (from `build_runner`).
 

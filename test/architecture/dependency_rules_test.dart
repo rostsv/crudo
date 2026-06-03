@@ -14,6 +14,20 @@ const Map<String, List<String>> allowedPackageImports = {
     'package:crudo/domain/',
   ],
   'lib/utils': ['dart:'],
+  'lib/data': [
+    'dart:',
+    'package:crudo/domain/',
+    'package:crudo/data/',
+    'package:flutter/services.dart', // rootBundle (seed asset)
+    'package:flutter_riverpod/',
+    'package:uuid/',
+  ],
+  'lib/config': [
+    'dart:',
+    'package:crudo/', // composition root may see all layers
+    'package:flutter/',
+    'package:flutter_riverpod/',
+  ],
 };
 
 void main() {

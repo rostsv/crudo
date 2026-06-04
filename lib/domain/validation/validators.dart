@@ -1,13 +1,11 @@
 import '../day/day.dart';
-import '../meal/meal.dart';
-import '../meal/meal_product.dart';
+import '../food/food.dart';
+import '../meal/meal_snapshot.dart';
 import '../meal/meal_template.dart';
 import '../plan/plan_slot.dart';
 import '../plan/plan_template.dart';
-import '../product/product.dart';
 import '../profile/prefs.dart';
 import '../profile/user_profile.dart';
-import '../services/nutrition.dart';
 import 'validation_issue.dart';
 
 /// Tier-2 (user-facing) validation: called at SAVE boundaries by forms/repos.
@@ -22,7 +20,6 @@ List<ValidationIssue> _macroRules({
   required double protein,
   required double carbs,
   required double fats,
-  required double? kcalOverride,
 }) {
   final issues = <ValidationIssue>[];
   if (name.trim().isEmpty) {
@@ -33,25 +30,6 @@ List<ValidationIssue> _macroRules({
         message: 'Name must not be blank',
       ),
     );
-  }
-  if (kcalOverride != null) {
-    final calculated = calculatedKcal(
-      protein: protein,
-      carbs: carbs,
-      fats: fats,
-    );
-    final valid =
-        kcalOverride >= 0 &&
-        isKcalOverrideValid(calculated: calculated, override: kcalOverride);
-    if (!valid) {
-      issues.add(
-        const ValidationIssue(
-          field: 'kcalOverride',
-          code: ValidationCode.kcalOverrideOutOfRange,
-          message: 'kcal override must be within ±10% of the calculated value',
-        ),
-      );
-    }
   }
   if (protein + carbs + fats > _macroMassLimit) {
     issues.add(
@@ -65,24 +43,9 @@ List<ValidationIssue> _macroRules({
   return issues;
 }
 
-extension ProductValidation on Product {
-  List<ValidationIssue> validate() => _macroRules(
-    name: name,
-    protein: protein,
-    carbs: carbs,
-    fats: fats,
-    kcalOverride: kcalOverride,
-  );
-}
-
-extension MealProductValidation on MealProduct {
-  List<ValidationIssue> validate() => _macroRules(
-    name: name,
-    protein: protein,
-    carbs: carbs,
-    fats: fats,
-    kcalOverride: kcalOverride,
-  );
+extension FoodValidation on Food {
+  List<ValidationIssue> validate() =>
+      _macroRules(name: name, protein: protein, carbs: carbs, fats: fats);
 }
 
 extension MealTemplateValidation on MealTemplate {
@@ -93,16 +56,16 @@ extension MealTemplateValidation on MealTemplate {
         code: ValidationCode.blankName,
         message: 'Meal name must not be blank',
       ),
-    if (products.isEmpty)
+    if (foods.isEmpty)
       const ValidationIssue(
-        field: 'products',
+        field: 'foods',
         code: ValidationCode.emptyMeal,
-        message: 'A meal must contain at least one product',
+        message: 'A meal must contain at least one food',
       ),
   ];
 }
 
-extension MealValidation on Meal {
+extension MealSnapshotValidation on MealSnapshot {
   List<ValidationIssue> validate() => [
     if (name.trim().isEmpty)
       const ValidationIssue(
@@ -110,11 +73,11 @@ extension MealValidation on Meal {
         code: ValidationCode.blankName,
         message: 'Meal name must not be blank',
       ),
-    if (products.isEmpty)
+    if (items.isEmpty)
       const ValidationIssue(
-        field: 'products',
+        field: 'items',
         code: ValidationCode.emptyMeal,
-        message: 'A meal must contain at least one product',
+        message: 'A meal must contain at least one item',
       ),
   ];
 }
@@ -204,3 +167,6 @@ extension UserProfileValidation on UserProfile {
       ),
   ];
 }
+
+// ValidationCode.kcalOverrideOutOfRange is parked; the S07 add/edit-food
+// form's explicit-kcal rule reuses it (input flow).

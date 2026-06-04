@@ -4,6 +4,7 @@ enum ValidationCode {
   blankName,
   blankId,
   blankMealTemplateId,
+  // reused by S07 form validation (explicit-kcal input rule, ±10% bound)
   kcalOverrideOutOfRange,
   macroMassExceeded,
   emptyMeal,

@@ -1,26 +1,28 @@
 import 'package:checks/checks.dart';
 import 'package:crudo/data/local_user.dart';
 import 'package:crudo/data/repositories/in_memory_day_repository.dart';
-import 'package:crudo/data/repositories/in_memory_product_repository.dart';
+import 'package:crudo/data/repositories/in_memory_food_repository.dart';
 import 'package:crudo/data/repositories/in_memory_profile_repository.dart';
 import 'package:crudo/data/repositories/in_memory_streak_repository.dart';
 import 'package:crudo/domain/day/day.dart';
-import 'package:crudo/domain/product/product.dart';
+import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/shared/enums.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _chicken = Product(
+const _chicken = Food(
   id: 'p1',
   name: 'Chicken',
-  category: ProductCategory.meat,
+  kind: FoodKind.product,
+  category: FoodCategory.meat,
   protein: 31,
   carbs: 0,
   fats: 3.6,
+  kcalPer100g: 165,
 );
 
 void main() {
   test('crud: save/get/upsert/delete round-trip', () async {
-    final repo = InMemoryProductRepository();
+    final repo = InMemoryFoodRepository();
     await repo.save(_chicken);
     check(await repo.getById('p1')).equals(_chicken);
     await repo.save(_chicken.copyWith(name: 'Chicken breast'));
@@ -31,15 +33,15 @@ void main() {
     check(await repo.getAll()).isEmpty();
   });
 
-  test('seeded products are present and overlay with user saves', () async {
-    final repo = InMemoryProductRepository(seed: const [_chicken]);
+  test('seeded foods are present and overlay with user saves', () async {
+    final repo = InMemoryFoodRepository(seed: const [_chicken]);
     check((await repo.getAll()).length).equals(1);
     await repo.save(_chicken.copyWith(id: 'p2', isCustom: true));
     check((await repo.getAll()).length).equals(2);
   });
 
   test('watchAll emits current state on listen, then on mutations', () async {
-    final repo = InMemoryProductRepository(seed: const [_chicken]);
+    final repo = InMemoryFoodRepository(seed: const [_chicken]);
     final emissions = <int>[];
     final sub = repo.watchAll().listen((list) => emissions.add(list.length));
     await Future<void>.delayed(Duration.zero); // initial emission

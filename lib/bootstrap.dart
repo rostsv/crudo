@@ -10,12 +10,12 @@ import 'data/services/seed_service.dart';
 /// scope everything, run the app.
 Future<void> bootstrap(AppConfig config) async {
   WidgetsFlutterBinding.ensureInitialized();
-  final seedProducts = await SeedService().loadProducts();
+  final seedFoods = await SeedService().loadFoods();
   runApp(
     ProviderScope(
       overrides: [
         appConfigProvider.overrideWithValue(config),
-        seedProductsProvider.overrideWithValue(seedProducts),
+        seedFoodsProvider.overrideWithValue(seedFoods),
       ],
       child: const CrudoApp(),
     ),

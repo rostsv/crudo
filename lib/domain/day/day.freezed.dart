@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Day {
 
- DateTime get date; String? get sourcePlanId; String? get planName; List<Meal> get meals; double? get adherence; DayState? get state;
+ DateTime get date; String? get sourcePlanId; String? get planName; List<ScheduledMeal> get meals; double? get adherence; int? get thresholdUsed; DateTime? get lockedAt;
 /// Create a copy of Day
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $DayCopyWith<Day> get copyWith => _$DayCopyWithImpl<Day>(this as Day, _$identity
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Day&&(identical(other.date, date) || other.date == date)&&(identical(other.sourcePlanId, sourcePlanId) || other.sourcePlanId == sourcePlanId)&&(identical(other.planName, planName) || other.planName == planName)&&const DeepCollectionEquality().equals(other.meals, meals)&&(identical(other.adherence, adherence) || other.adherence == adherence)&&(identical(other.state, state) || other.state == state));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Day&&(identical(other.date, date) || other.date == date)&&(identical(other.sourcePlanId, sourcePlanId) || other.sourcePlanId == sourcePlanId)&&(identical(other.planName, planName) || other.planName == planName)&&const DeepCollectionEquality().equals(other.meals, meals)&&(identical(other.adherence, adherence) || other.adherence == adherence)&&(identical(other.thresholdUsed, thresholdUsed) || other.thresholdUsed == thresholdUsed)&&(identical(other.lockedAt, lockedAt) || other.lockedAt == lockedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,date,sourcePlanId,planName,const DeepCollectionEquality().hash(meals),adherence,state);
+int get hashCode => Object.hash(runtimeType,date,sourcePlanId,planName,const DeepCollectionEquality().hash(meals),adherence,thresholdUsed,lockedAt);
 
 @override
 String toString() {
-  return 'Day(date: $date, sourcePlanId: $sourcePlanId, planName: $planName, meals: $meals, adherence: $adherence, state: $state)';
+  return 'Day(date: $date, sourcePlanId: $sourcePlanId, planName: $planName, meals: $meals, adherence: $adherence, thresholdUsed: $thresholdUsed, lockedAt: $lockedAt)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $DayCopyWith<$Res>  {
   factory $DayCopyWith(Day value, $Res Function(Day) _then) = _$DayCopyWithImpl;
 @useResult
 $Res call({
- DateTime date, String? sourcePlanId, String? planName, List<Meal> meals, double? adherence, DayState? state
+ DateTime date, String? sourcePlanId, String? planName, List<ScheduledMeal> meals, double? adherence, int? thresholdUsed, DateTime? lockedAt
 });
 
 
@@ -62,15 +62,16 @@ class _$DayCopyWithImpl<$Res>
 
 /// Create a copy of Day
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? date = null,Object? sourcePlanId = freezed,Object? planName = freezed,Object? meals = null,Object? adherence = freezed,Object? state = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? date = null,Object? sourcePlanId = freezed,Object? planName = freezed,Object? meals = null,Object? adherence = freezed,Object? thresholdUsed = freezed,Object? lockedAt = freezed,}) {
   return _then(_self.copyWith(
 date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
 as DateTime,sourcePlanId: freezed == sourcePlanId ? _self.sourcePlanId : sourcePlanId // ignore: cast_nullable_to_non_nullable
 as String?,planName: freezed == planName ? _self.planName : planName // ignore: cast_nullable_to_non_nullable
 as String?,meals: null == meals ? _self.meals : meals // ignore: cast_nullable_to_non_nullable
-as List<Meal>,adherence: freezed == adherence ? _self.adherence : adherence // ignore: cast_nullable_to_non_nullable
-as double?,state: freezed == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
-as DayState?,
+as List<ScheduledMeal>,adherence: freezed == adherence ? _self.adherence : adherence // ignore: cast_nullable_to_non_nullable
+as double?,thresholdUsed: freezed == thresholdUsed ? _self.thresholdUsed : thresholdUsed // ignore: cast_nullable_to_non_nullable
+as int?,lockedAt: freezed == lockedAt ? _self.lockedAt : lockedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 
@@ -155,10 +156,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime date,  String? sourcePlanId,  String? planName,  List<Meal> meals,  double? adherence,  DayState? state)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( DateTime date,  String? sourcePlanId,  String? planName,  List<ScheduledMeal> meals,  double? adherence,  int? thresholdUsed,  DateTime? lockedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Day() when $default != null:
-return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.adherence,_that.state);case _:
+return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.adherence,_that.thresholdUsed,_that.lockedAt);case _:
   return orElse();
 
 }
@@ -176,10 +177,10 @@ return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.a
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime date,  String? sourcePlanId,  String? planName,  List<Meal> meals,  double? adherence,  DayState? state)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( DateTime date,  String? sourcePlanId,  String? planName,  List<ScheduledMeal> meals,  double? adherence,  int? thresholdUsed,  DateTime? lockedAt)  $default,) {final _that = this;
 switch (_that) {
 case _Day():
-return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.adherence,_that.state);case _:
+return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.adherence,_that.thresholdUsed,_that.lockedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -196,10 +197,10 @@ return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.a
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime date,  String? sourcePlanId,  String? planName,  List<Meal> meals,  double? adherence,  DayState? state)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( DateTime date,  String? sourcePlanId,  String? planName,  List<ScheduledMeal> meals,  double? adherence,  int? thresholdUsed,  DateTime? lockedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _Day() when $default != null:
-return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.adherence,_that.state);case _:
+return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.adherence,_that.thresholdUsed,_that.lockedAt);case _:
   return null;
 
 }
@@ -211,21 +212,22 @@ return $default(_that.date,_that.sourcePlanId,_that.planName,_that.meals,_that.a
 
 
 class _Day extends Day {
-   _Day({required this.date, this.sourcePlanId, this.planName, final  List<Meal> meals = const <Meal>[], this.adherence, this.state}): assert(date.isUtc, 'date must be the UTC-encoded local-date label'),assert(date.hour == 0 && date.minute == 0 && date.second == 0 && date.millisecond == 0 && date.microsecond == 0, 'date must be midnight-normalized'),assert((adherence == null) == (state == null), 'adherence and state are frozen together at lock'),assert(adherence == null || (adherence >= 0 && adherence <= 1), 'adherence must be within [0,1]'),_meals = meals,super._();
+   _Day({required this.date, this.sourcePlanId, this.planName, final  List<ScheduledMeal> meals = const <ScheduledMeal>[], this.adherence, this.thresholdUsed, this.lockedAt}): assert(date.isUtc, 'date must be the UTC-encoded local-date label'),assert(date.hour == 0 && date.minute == 0 && date.second == 0 && date.millisecond == 0 && date.microsecond == 0, 'date must be midnight-normalized'),assert((adherence == null) == (thresholdUsed == null) && (adherence == null) == (lockedAt == null), 'adherence, thresholdUsed and lockedAt are frozen together at lock'),assert(adherence == null || (adherence >= 0 && adherence <= 1), 'adherence must be within [0,1]'),assert(lockedAt == null || lockedAt.isUtc, 'lockedAt must be UTC'),_meals = meals,super._();
   
 
 @override final  DateTime date;
 @override final  String? sourcePlanId;
 @override final  String? planName;
- final  List<Meal> _meals;
-@override@JsonKey() List<Meal> get meals {
+ final  List<ScheduledMeal> _meals;
+@override@JsonKey() List<ScheduledMeal> get meals {
   if (_meals is EqualUnmodifiableListView) return _meals;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_meals);
 }
 
 @override final  double? adherence;
-@override final  DayState? state;
+@override final  int? thresholdUsed;
+@override final  DateTime? lockedAt;
 
 /// Create a copy of Day
 /// with the given fields replaced by the non-null parameter values.
@@ -237,16 +239,16 @@ _$DayCopyWith<_Day> get copyWith => __$DayCopyWithImpl<_Day>(this, _$identity);
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Day&&(identical(other.date, date) || other.date == date)&&(identical(other.sourcePlanId, sourcePlanId) || other.sourcePlanId == sourcePlanId)&&(identical(other.planName, planName) || other.planName == planName)&&const DeepCollectionEquality().equals(other._meals, _meals)&&(identical(other.adherence, adherence) || other.adherence == adherence)&&(identical(other.state, state) || other.state == state));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Day&&(identical(other.date, date) || other.date == date)&&(identical(other.sourcePlanId, sourcePlanId) || other.sourcePlanId == sourcePlanId)&&(identical(other.planName, planName) || other.planName == planName)&&const DeepCollectionEquality().equals(other._meals, _meals)&&(identical(other.adherence, adherence) || other.adherence == adherence)&&(identical(other.thresholdUsed, thresholdUsed) || other.thresholdUsed == thresholdUsed)&&(identical(other.lockedAt, lockedAt) || other.lockedAt == lockedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,date,sourcePlanId,planName,const DeepCollectionEquality().hash(_meals),adherence,state);
+int get hashCode => Object.hash(runtimeType,date,sourcePlanId,planName,const DeepCollectionEquality().hash(_meals),adherence,thresholdUsed,lockedAt);
 
 @override
 String toString() {
-  return 'Day(date: $date, sourcePlanId: $sourcePlanId, planName: $planName, meals: $meals, adherence: $adherence, state: $state)';
+  return 'Day(date: $date, sourcePlanId: $sourcePlanId, planName: $planName, meals: $meals, adherence: $adherence, thresholdUsed: $thresholdUsed, lockedAt: $lockedAt)';
 }
 
 
@@ -257,7 +259,7 @@ abstract mixin class _$DayCopyWith<$Res> implements $DayCopyWith<$Res> {
   factory _$DayCopyWith(_Day value, $Res Function(_Day) _then) = __$DayCopyWithImpl;
 @override @useResult
 $Res call({
- DateTime date, String? sourcePlanId, String? planName, List<Meal> meals, double? adherence, DayState? state
+ DateTime date, String? sourcePlanId, String? planName, List<ScheduledMeal> meals, double? adherence, int? thresholdUsed, DateTime? lockedAt
 });
 
 
@@ -274,15 +276,16 @@ class __$DayCopyWithImpl<$Res>
 
 /// Create a copy of Day
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? date = null,Object? sourcePlanId = freezed,Object? planName = freezed,Object? meals = null,Object? adherence = freezed,Object? state = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? date = null,Object? sourcePlanId = freezed,Object? planName = freezed,Object? meals = null,Object? adherence = freezed,Object? thresholdUsed = freezed,Object? lockedAt = freezed,}) {
   return _then(_Day(
 date: null == date ? _self.date : date // ignore: cast_nullable_to_non_nullable
 as DateTime,sourcePlanId: freezed == sourcePlanId ? _self.sourcePlanId : sourcePlanId // ignore: cast_nullable_to_non_nullable
 as String?,planName: freezed == planName ? _self.planName : planName // ignore: cast_nullable_to_non_nullable
 as String?,meals: null == meals ? _self._meals : meals // ignore: cast_nullable_to_non_nullable
-as List<Meal>,adherence: freezed == adherence ? _self.adherence : adherence // ignore: cast_nullable_to_non_nullable
-as double?,state: freezed == state ? _self.state : state // ignore: cast_nullable_to_non_nullable
-as DayState?,
+as List<ScheduledMeal>,adherence: freezed == adherence ? _self.adherence : adherence // ignore: cast_nullable_to_non_nullable
+as double?,thresholdUsed: freezed == thresholdUsed ? _self.thresholdUsed : thresholdUsed // ignore: cast_nullable_to_non_nullable
+as int?,lockedAt: freezed == lockedAt ? _self.lockedAt : lockedAt // ignore: cast_nullable_to_non_nullable
+as DateTime?,
   ));
 }
 

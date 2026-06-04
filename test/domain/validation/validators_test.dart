@@ -1,12 +1,14 @@
 // test/domain/validation/validators_test.dart
 import 'package:checks/checks.dart';
 import 'package:crudo/domain/day/day.dart';
-import 'package:crudo/domain/meal/meal.dart';
-import 'package:crudo/domain/meal/meal_product.dart';
+import 'package:crudo/domain/day/scheduled_meal.dart';
+import 'package:crudo/domain/food/food.dart';
+import 'package:crudo/domain/meal/food_snapshot.dart';
+import 'package:crudo/domain/meal/meal_item.dart';
+import 'package:crudo/domain/meal/meal_snapshot.dart';
 import 'package:crudo/domain/meal/meal_template.dart';
 import 'package:crudo/domain/plan/plan_slot.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
-import 'package:crudo/domain/product/product.dart';
 import 'package:crudo/domain/profile/prefs.dart';
 import 'package:crudo/domain/profile/user_profile.dart';
 import 'package:crudo/domain/shared/enums.dart';
@@ -16,84 +18,84 @@ import 'package:crudo/domain/validation/validation_issue.dart';
 import 'package:crudo/domain/validation/validators.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-Product _product({
+Food _food({
   String name = 'Chicken',
   double p = 20,
   double c = 30,
   double f = 10,
-  double? kcal,
-}) => Product(
+  double kcal = 290,
+}) => Food(
   id: 'x',
   name: name,
-  category: ProductCategory.meat,
+  kind: FoodKind.product,
+  category: FoodCategory.meat,
   protein: p,
   carbs: c,
   fats: f,
-  kcalOverride: kcal,
+  kcalPer100g: kcal,
 );
 
-Meal _meal({
-  String id = 'm1',
-  String name = 'Lunch',
-  List<MealProduct> products = const [],
-}) => Meal(id: id, time: const MealTime(720), name: name, products: products);
-
-const _snap = MealProduct(
+const _egg = Food(
+  id: 'e',
   name: 'Eggs',
-  category: ProductCategory.eggs,
+  kind: FoodKind.product,
+  category: FoodCategory.eggs,
   protein: 13,
   carbs: 1,
   fats: 11,
-  grams: Grams(100),
+  kcalPer100g: 155,
+);
+
+FoodSnapshot _snap() => FoodSnapshot.from(_egg, const Grams(100));
+
+MealSnapshot _mealSnap({
+  String name = 'Lunch',
+  List<MealItem> items = const [],
+}) => MealSnapshot(name: name, items: items);
+
+ScheduledMeal _sm({String id = 'm1', String name = 'Lunch'}) => ScheduledMeal(
+  id: id,
+  time: const MealTime(12 * 60),
+  meal: _mealSnap(name: name),
 );
 
 void main() {
   List<ValidationCode> codes(List<ValidationIssue> issues) =>
       issues.map((i) => i.code).toList();
 
-  test('valid product → no issues', () {
-    check(_product(kcal: 300).validate()).isEmpty(); // calc 290, within 10%
+  test('valid food → no issues', () {
+    check(_food().validate()).isEmpty();
   });
 
-  test('product: blank name', () {
+  test('food: blank name', () {
     check(
-      codes(_product(name: '  ').validate()),
+      codes(_food(name: '  ').validate()),
     ).contains(ValidationCode.blankName);
   });
 
-  test('product: kcal override out of ±10%', () {
+  test('food: macro mass > 100g per 100g (±1g tolerance)', () {
     check(
-      codes(_product(kcal: 400).validate()),
-    ).contains(ValidationCode.kcalOverrideOutOfRange);
-    check(
-      codes(_product(kcal: -5).validate()),
-    ).contains(ValidationCode.kcalOverrideOutOfRange);
-  });
-
-  test('product: macro mass > 100g per 100g (±1g tolerance)', () {
-    check(
-      codes(_product(p: 60, c: 50, f: 0).validate()),
+      codes(_food(p: 60, c: 50, f: 0).validate()),
     ).contains(ValidationCode.macroMassExceeded);
-    check(
-      _product(p: 60, c: 40, f: 0.9).validate(),
-    ).isEmpty(); // 100.9 ≤ 101 ok
+    check(_food(p: 60, c: 40, f: 0.9).validate()).isEmpty(); // 100.9 ≤ 101 ok
   });
 
-  test('meal product snapshot: same rules apply', () {
-    final bad = _snap.copyWith(name: '', kcalOverride: 999);
-    check(codes(bad.validate()))
-      ..contains(ValidationCode.blankName)
-      ..contains(ValidationCode.kcalOverrideOutOfRange);
+  test('food: stored kcalPer100g is not validated against formula', () {
+    // the ±10% rule is enforced at INPUT time (S07) — stored value is trusted
+    check(_food(p: 20, c: 30, f: 10, kcal: 1000).validate()).isEmpty();
   });
 
-  test('meal template / instance meal: blank name + empty products', () {
+  test('meal template: blank name + empty foods', () {
     check(codes(const MealTemplate(id: 't', name: '').validate()))
       ..contains(ValidationCode.blankName)
       ..contains(ValidationCode.emptyMeal);
-    check(codes(_meal(name: ' ').validate()))
+    check(_mealSnap(items: [MealItem(food: _snap())]).validate()).isEmpty();
+  });
+
+  test('MealSnapshot: blank name + empty items', () {
+    check(codes(_mealSnap(name: ' ').validate()))
       ..contains(ValidationCode.blankName)
       ..contains(ValidationCode.emptyMeal);
-    check(_meal(products: [_snap]).validate()).isEmpty();
   });
 
   test('plan slot: blank meal template id', () {
@@ -142,8 +144,8 @@ void main() {
     final d = Day(
       date: DateTime.utc(2026, 6, 3),
       meals: [
-        _meal(products: [_snap]),
-        _meal(products: [_snap]),
+        _sm(id: 'm1'),
+        _sm(id: 'm1'),
       ],
     );
     check(codes(d.validate())).contains(ValidationCode.duplicateMealId);

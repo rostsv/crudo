@@ -1,6 +1,6 @@
 import 'package:checks/checks.dart';
 import 'package:crudo/config/di.dart';
-import 'package:crudo/domain/product/product.dart';
+import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/shared/enums.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,22 +8,24 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('all repo providers resolve against an overridden seed', () async {
     const seed = [
-      Product(
+      Food(
         id: 's1',
         name: 'Egg',
-        category: ProductCategory.eggs,
+        kind: FoodKind.product,
+        category: FoodCategory.eggs,
         protein: 13,
         carbs: 1.1,
         fats: 11,
+        kcalPer100g: 155,
       ),
     ];
     final container = ProviderContainer(
-      overrides: [seedProductsProvider.overrideWithValue(seed)],
+      overrides: [seedFoodsProvider.overrideWithValue(seed)],
     );
     addTearDown(container.dispose);
 
     check(
-      (await container.read(productRepositoryProvider).getAll()).length,
+      (await container.read(foodRepositoryProvider).getAll()).length,
     ).equals(1);
     check(
       await container.read(mealTemplateRepositoryProvider).getAll(),
@@ -44,9 +46,9 @@ void main() {
     ).equals(0);
   });
 
-  test('seedProductsProvider throws when not overridden', () {
+  test('seedFoodsProvider throws when not overridden', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
-    check(() => container.read(seedProductsProvider)).throws<Object>();
+    check(() => container.read(seedFoodsProvider)).throws<Object>();
   });
 }

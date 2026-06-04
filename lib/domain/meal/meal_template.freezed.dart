@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$MealTemplate {
 
- String get id; String get name; List<MealTag> get tags; List<ProductRef> get products;
+ String get id; String get name; List<MealTag> get tags; List<FoodRef> get foods;
 /// Create a copy of MealTemplate
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -25,16 +25,16 @@ $MealTemplateCopyWith<MealTemplate> get copyWith => _$MealTemplateCopyWithImpl<M
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MealTemplate&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.tags, tags)&&const DeepCollectionEquality().equals(other.products, products));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MealTemplate&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other.tags, tags)&&const DeepCollectionEquality().equals(other.foods, foods));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(tags),const DeepCollectionEquality().hash(products));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(tags),const DeepCollectionEquality().hash(foods));
 
 @override
 String toString() {
-  return 'MealTemplate(id: $id, name: $name, tags: $tags, products: $products)';
+  return 'MealTemplate(id: $id, name: $name, tags: $tags, foods: $foods)';
 }
 
 
@@ -45,7 +45,7 @@ abstract mixin class $MealTemplateCopyWith<$Res>  {
   factory $MealTemplateCopyWith(MealTemplate value, $Res Function(MealTemplate) _then) = _$MealTemplateCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, List<MealTag> tags, List<ProductRef> products
+ String id, String name, List<MealTag> tags, List<FoodRef> foods
 });
 
 
@@ -62,13 +62,13 @@ class _$MealTemplateCopyWithImpl<$Res>
 
 /// Create a copy of MealTemplate
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? tags = null,Object? products = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? tags = null,Object? foods = null,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,tags: null == tags ? _self.tags : tags // ignore: cast_nullable_to_non_nullable
-as List<MealTag>,products: null == products ? _self.products : products // ignore: cast_nullable_to_non_nullable
-as List<ProductRef>,
+as List<MealTag>,foods: null == foods ? _self.foods : foods // ignore: cast_nullable_to_non_nullable
+as List<FoodRef>,
   ));
 }
 
@@ -153,10 +153,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  List<MealTag> tags,  List<ProductRef> products)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  List<MealTag> tags,  List<FoodRef> foods)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MealTemplate() when $default != null:
-return $default(_that.id,_that.name,_that.tags,_that.products);case _:
+return $default(_that.id,_that.name,_that.tags,_that.foods);case _:
   return orElse();
 
 }
@@ -174,10 +174,10 @@ return $default(_that.id,_that.name,_that.tags,_that.products);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  List<MealTag> tags,  List<ProductRef> products)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  List<MealTag> tags,  List<FoodRef> foods)  $default,) {final _that = this;
 switch (_that) {
 case _MealTemplate():
-return $default(_that.id,_that.name,_that.tags,_that.products);case _:
+return $default(_that.id,_that.name,_that.tags,_that.foods);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -194,10 +194,10 @@ return $default(_that.id,_that.name,_that.tags,_that.products);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  List<MealTag> tags,  List<ProductRef> products)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  List<MealTag> tags,  List<FoodRef> foods)?  $default,) {final _that = this;
 switch (_that) {
 case _MealTemplate() when $default != null:
-return $default(_that.id,_that.name,_that.tags,_that.products);case _:
+return $default(_that.id,_that.name,_that.tags,_that.foods);case _:
   return null;
 
 }
@@ -209,7 +209,7 @@ return $default(_that.id,_that.name,_that.tags,_that.products);case _:
 
 
 class _MealTemplate extends MealTemplate {
-  const _MealTemplate({required this.id, required this.name, final  List<MealTag> tags = const <MealTag>[], final  List<ProductRef> products = const <ProductRef>[]}): _tags = tags,_products = products,super._();
+  const _MealTemplate({required this.id, required this.name, final  List<MealTag> tags = const <MealTag>[], final  List<FoodRef> foods = const <FoodRef>[]}): _tags = tags,_foods = foods,super._();
   
 
 @override final  String id;
@@ -221,11 +221,11 @@ class _MealTemplate extends MealTemplate {
   return EqualUnmodifiableListView(_tags);
 }
 
- final  List<ProductRef> _products;
-@override@JsonKey() List<ProductRef> get products {
-  if (_products is EqualUnmodifiableListView) return _products;
+ final  List<FoodRef> _foods;
+@override@JsonKey() List<FoodRef> get foods {
+  if (_foods is EqualUnmodifiableListView) return _foods;
   // ignore: implicit_dynamic_type
-  return EqualUnmodifiableListView(_products);
+  return EqualUnmodifiableListView(_foods);
 }
 
 
@@ -239,16 +239,16 @@ _$MealTemplateCopyWith<_MealTemplate> get copyWith => __$MealTemplateCopyWithImp
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MealTemplate&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._tags, _tags)&&const DeepCollectionEquality().equals(other._products, _products));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _MealTemplate&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&const DeepCollectionEquality().equals(other._tags, _tags)&&const DeepCollectionEquality().equals(other._foods, _foods));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_tags),const DeepCollectionEquality().hash(_products));
+int get hashCode => Object.hash(runtimeType,id,name,const DeepCollectionEquality().hash(_tags),const DeepCollectionEquality().hash(_foods));
 
 @override
 String toString() {
-  return 'MealTemplate(id: $id, name: $name, tags: $tags, products: $products)';
+  return 'MealTemplate(id: $id, name: $name, tags: $tags, foods: $foods)';
 }
 
 
@@ -259,7 +259,7 @@ abstract mixin class _$MealTemplateCopyWith<$Res> implements $MealTemplateCopyWi
   factory _$MealTemplateCopyWith(_MealTemplate value, $Res Function(_MealTemplate) _then) = __$MealTemplateCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, List<MealTag> tags, List<ProductRef> products
+ String id, String name, List<MealTag> tags, List<FoodRef> foods
 });
 
 
@@ -276,13 +276,13 @@ class __$MealTemplateCopyWithImpl<$Res>
 
 /// Create a copy of MealTemplate
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? tags = null,Object? products = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? tags = null,Object? foods = null,}) {
   return _then(_MealTemplate(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,tags: null == tags ? _self._tags : tags // ignore: cast_nullable_to_non_nullable
-as List<MealTag>,products: null == products ? _self._products : products // ignore: cast_nullable_to_non_nullable
-as List<ProductRef>,
+as List<MealTag>,foods: null == foods ? _self._foods : foods // ignore: cast_nullable_to_non_nullable
+as List<FoodRef>,
   ));
 }
 

@@ -1,7 +1,7 @@
-/// Wire shape of a seed product (assets/seed/products.json). Hand-written —
+/// Wire shape of a seed food (assets/seed/products.json). Hand-written —
 /// no JSON codegen in the project until S20 justifies it.
-class ProductDto {
-  const ProductDto({
+class FoodDto {
+  const FoodDto({
     required this.id,
     required this.name,
     required this.category,
@@ -10,7 +10,7 @@ class ProductDto {
     required this.fats,
   });
 
-  factory ProductDto.fromJson(Map<String, dynamic> json) => ProductDto(
+  factory FoodDto.fromJson(Map<String, dynamic> json) => FoodDto(
     id: json['id'] as String,
     name: json['name'] as String,
     category: json['category'] as String,

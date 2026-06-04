@@ -29,7 +29,7 @@
 
 **Skills:** `.agents/skills/dart-add-unit-test`, `.agents/skills/dart-migrate-to-checks-package`.
 
-- [ ] **Step 1.1 — enums:** in `lib/domain/shared/enums.dart` rename `ProductCategory` → `FoodCategory` (same values) and add below it:
+- [x] **Step 1.1 — enums:** in `lib/domain/shared/enums.dart` rename `ProductCategory` → `FoodCategory` (same values) and add below it:
 
 ```dart
 /// Food library kind — display/filter only (library "Dishes" group, meal-row
@@ -39,7 +39,7 @@ enum FoodKind { product, dish }
 
 Leave `MealStatus`, `MealTag`, `Goal`, `Unit`, `ReminderMode`, `DayState` untouched (`DayState` stays — S12 derives it; it just stops being a `Day` field in Task 3).
 
-- [ ] **Step 1.2 — `lib/domain/food/food.dart`** (replaces `product.dart`):
+- [x] **Step 1.2 — `lib/domain/food/food.dart`** (replaces `product.dart`):
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -76,7 +76,7 @@ abstract class Food with _$Food {
 }
 ```
 
-- [ ] **Step 1.3 — `lib/domain/food/food_ref.dart`** (replaces `product_ref.dart`):
+- [x] **Step 1.3 — `lib/domain/food/food_ref.dart`** (replaces `product_ref.dart`):
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -96,7 +96,7 @@ abstract class FoodRef with _$FoodRef {
 }
 ```
 
-- [ ] **Step 1.4 — `lib/domain/meal/meal_template.dart`:** swap the import and list type; keep field name `products` → rename to `items` is **NOT** done here — template field renames to `foods`? **No.** Keep the template field named `products`? **Decision: rename to `foods`** for consistency with the new type:
+- [x] **Step 1.4 — `lib/domain/meal/meal_template.dart`:** swap the import and list type; keep field name `products` → rename to `items` is **NOT** done here — template field renames to `foods`? **No.** Keep the template field named `products`? **Decision: rename to `foods`** for consistency with the new type:
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -121,7 +121,7 @@ abstract class MealTemplate with _$MealTemplate {
 }
 ```
 
-- [ ] **Step 1.5 — `lib/domain/services/nutrition.dart`:** library-side only in this task (instance-side fns move/change in Task 3). Replace the whole file with:
+- [x] **Step 1.5 — `lib/domain/services/nutrition.dart`:** library-side only in this task (instance-side fns move/change in Task 3). Replace the whole file with:
 
 ```dart
 import '../food/food.dart';
@@ -178,7 +178,7 @@ Macros mealTemplateMacros(MealTemplate template, Map<String, Food> foodsById) {
 
 (`macrosForProduct`, `mealMacros`, `consumedMacros`, `effectiveKcalPer100g` are deleted — instance-side replacements arrive in Task 3; `isKcalOverrideValid` is renamed to `isExplicitKcalValid`. The old `Meal`/`MealProduct` imports go away — that breaks `validators.dart`, fixed next step, and `meal.dart`/`meal_product.dart`, which Task 3 replaces; to keep THIS task green, Step 1.7 temporarily patches them.)
 
-- [ ] **Step 1.6 — `lib/domain/validation/validators.dart`:** update the food rules; keep meal/plan/day/profile rules compiling against current types:
+- [x] **Step 1.6 — `lib/domain/validation/validators.dart`:** update the food rules; keep meal/plan/day/profile rules compiling against current types:
   - Replace `_macroRules` (kcalOverride block goes away) and the `Product`/`MealProduct` extensions:
 
 ```dart
@@ -222,7 +222,7 @@ extension FoodValidation on Food {
   - Keep `MealValidation`, `PlanSlotValidation`, `PlanTemplateValidation`, `DayValidation`, `PrefsValidation`, `UserProfileValidation` as-is (they compile unchanged).
   - If `ValidationCode.kcalOverrideOutOfRange` is now unreferenced, leave the enum value in place (S07 will reuse it for the explicit-entry form rule) with a `// reused by S07 form validation` comment in `validation_issue.dart`.
 
-- [ ] **Step 1.7 — temporary instance-tree patch** (keeps Task 1 green; Task 3 replaces these files): in `lib/domain/meal/meal_product.dart` change `ProductCategory` → `FoodCategory` (import stays `../shared/enums.dart`; field `kcalOverride` stays for now). In `lib/domain/repositories/product_repository.dart`: rename file to `food_repository.dart`, content:
+- [x] **Step 1.7 — temporary instance-tree patch** (keeps Task 1 green; Task 3 replaces these files): in `lib/domain/meal/meal_product.dart` change `ProductCategory` → `FoodCategory` (import stays `../shared/enums.dart`; field `kcalOverride` stays for now). In `lib/domain/repositories/product_repository.dart`: rename file to `food_repository.dart`, content:
 
 ```dart
 import '../food/food.dart';
@@ -239,9 +239,9 @@ abstract class FoodRepository {
 
 (Data-layer fallout compiles in Task 2 — run only `flutter test test/domain` at this step if the full suite is red on data files; full green is required at end of Task 2 instead. State this in the report if used.)
 
-- [ ] **Step 1.8 — codegen:** `dart run build_runner build`. Delete orphaned `lib/domain/product/` generated files.
+- [x] **Step 1.8 — codegen:** `dart run build_runner build`. Delete orphaned `lib/domain/product/` generated files.
 
-- [ ] **Step 1.9 — domain tests:** move/adjust per rename map: `Product(`→`Food(`, `category: ProductCategory.`→`category: FoodCategory.`, `fats:` unchanged, every `kcalOverride:` argument in Food constructions → `kcalPer100g:` with the value the test expects effective (for tests that asserted override behavior, the expectation becomes: stored value wins, no formula at read). Files: `test/domain/food/food_test.dart` (moved), `nutrition_test.dart` (drop `effectiveKcalPer100g`/`macrosForProduct`/`mealMacros`/`consumedMacros` tests — Task 3 re-adds instance-side; add the two below), `validators_test.dart`, `meal_test.dart`, `plan_test.dart`. New nutrition tests:
+- [x] **Step 1.9 — domain tests:** move/adjust per rename map: `Product(`→`Food(`, `category: ProductCategory.`→`category: FoodCategory.`, `fats:` unchanged, every `kcalOverride:` argument in Food constructions → `kcalPer100g:` with the value the test expects effective (for tests that asserted override behavior, the expectation becomes: stored value wins, no formula at read). Files: `test/domain/food/food_test.dart` (moved), `nutrition_test.dart` (drop `effectiveKcalPer100g`/`macrosForProduct`/`mealMacros`/`consumedMacros` tests — Task 3 re-adds instance-side; add the two below), `validators_test.dart`, `meal_test.dart`, `plan_test.dart`. New nutrition tests:
 
 ```dart
 import 'package:checks/checks.dart';
@@ -281,7 +281,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 1.10 — verify:** `dart format .` → `flutter analyze` (domain clean; data-layer errors allowed ONLY if Step 1.7 note applies) → `flutter test test/domain`. Expected: green.
+- [x] **Step 1.10 — verify:** `dart format .` → `flutter analyze` (domain clean; data-layer errors allowed ONLY if Step 1.7 note applies) → `flutter test test/domain`. Expected: green.
 
 **Acceptance:** `lib/domain/` has no `Product`/`ProductRef`/`ProductCategory`/`kcalOverride` identifiers left (grep clean, except the parked `ValidationCode` value); `test/domain` green.
 **Out of scope:** data layer, DI, instance tree, any engine fn.
@@ -299,9 +299,9 @@ void main() {
 
 **Skills:** `.agents/skills/dart-add-unit-test`, `.agents/skills/dart-migrate-to-checks-package`.
 
-- [ ] **Step 2.1 — `lib/data/dto/food_dto.dart`:** rename class only (`ProductDto`→`FoodDto`), fields unchanged (id/name/category/protein/carbs/fats — wire shape mirrors the asset).
+- [x] **Step 2.1 — `lib/data/dto/food_dto.dart`:** rename class only (`ProductDto`→`FoodDto`), fields unchanged (id/name/category/protein/carbs/fats — wire shape mirrors the asset).
 
-- [ ] **Step 2.2 — `lib/data/mappers/food_mapper.dart`:**
+- [x] **Step 2.2 — `lib/data/mappers/food_mapper.dart`:**
 
 ```dart
 import 'package:crudo/domain/food/food.dart';
@@ -330,9 +330,9 @@ abstract final class FoodMapper {
 }
 ```
 
-- [ ] **Step 2.3 — `in_memory_food_repository.dart`:** class `InMemoryFoodRepository extends InMemoryCrud<Food> implements FoodRepository`, constructor param `seed` unchanged. **Step 2.4 — `seed_service.dart`:** types `Food`/`FoodDto`/`FoodMapper`; asset path unchanged. **Step 2.5 — `di.dart`:** provider rename `productRepositoryProvider`→`foodRepositoryProvider`, types swap; everything else untouched.
+- [x] **Step 2.3 — `in_memory_food_repository.dart`:** class `InMemoryFoodRepository extends InMemoryCrud<Food> implements FoodRepository`, constructor param `seed` unchanged. **Step 2.4 — `seed_service.dart`:** types `Food`/`FoodDto`/`FoodMapper`; asset path unchanged. **Step 2.5 — `di.dart`:** provider rename `productRepositoryProvider`→`foodRepositoryProvider`, types swap; everything else untouched.
 
-- [ ] **Step 2.6 — tests:** apply rename map across `test/data/*` + `test/config/di_test.dart` (same map as Step 1.9 + `InMemoryProductRepository`→`InMemoryFoodRepository`, provider name). In `seed_test.dart` add one mapper assertion:
+- [x] **Step 2.6 — tests:** apply rename map across `test/data/*` + `test/config/di_test.dart` (same map as Step 1.9 + `InMemoryProductRepository`→`InMemoryFoodRepository`, provider name). In `seed_test.dart` add one mapper assertion:
 
 ```dart
 test('seed kcalPer100g is formula-derived and kind is product', () async {
@@ -346,9 +346,9 @@ test('seed kcalPer100g is formula-derived and kind is product', () async {
 
 (If `SeedService.loadProducts` reads better renamed to `loadFoods`, rename it and its call sites in `di.dart` + tests — keep the asset path.)
 
-- [ ] **Step 2.7 — arch test:** confirm `test/architecture/dependency_rules_test.dart` allowlists still hold (no path renames needed unless they reference `domain/product`). Run it.
+- [x] **Step 2.7 — arch test:** confirm `test/architecture/dependency_rules_test.dart` allowlists still hold (no path renames needed unless they reference `domain/product`). Run it.
 
-- [ ] **Step 2.8 — verify:** `dart format .` → `flutter analyze` (whole repo clean now) → `flutter test` (whole suite green).
+- [x] **Step 2.8 — verify:** `dart format .` → `flutter analyze` (whole repo clean now) → `flutter test` (whole suite green).
 
 **Acceptance:** repo-wide grep for `Product` finds only: the seed asset filename/path, `ValidationCode.kcalOverrideOutOfRange` parked value, historical docs. Full suite green.
 **Out of scope:** instance tree, engine.
@@ -367,7 +367,7 @@ test('seed kcalPer100g is formula-derived and kind is product', () async {
 
 **Skills:** `.agents/skills/dart-add-unit-test`, `.agents/skills/dart-migrate-to-checks-package`.
 
-- [ ] **Step 3.1 — `lib/domain/meal/food_snapshot.dart`:**
+- [x] **Step 3.1 — `lib/domain/meal/food_snapshot.dart`:**
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -422,7 +422,7 @@ abstract class FoodSnapshot with _$FoodSnapshot {
 }
 ```
 
-- [ ] **Step 3.2 — `lib/domain/meal/meal_item.dart`:**
+- [x] **Step 3.2 — `lib/domain/meal/meal_item.dart`:**
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -448,7 +448,7 @@ abstract class MealItem with _$MealItem {
 }
 ```
 
-- [ ] **Step 3.3 — `lib/domain/meal/meal_snapshot.dart`:**
+- [x] **Step 3.3 — `lib/domain/meal/meal_snapshot.dart`:**
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -478,7 +478,7 @@ abstract class MealSnapshot with _$MealSnapshot {
 }
 ```
 
-- [ ] **Step 3.4 — `lib/domain/day/scheduled_meal.dart`:**
+- [x] **Step 3.4 — `lib/domain/day/scheduled_meal.dart`:**
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -514,7 +514,7 @@ abstract class ScheduledMeal with _$ScheduledMeal {
 }
 ```
 
-- [ ] **Step 3.5 — `lib/domain/day/day.dart`:** replace fields + asserts (ops arrive in Task 5 — this step is model only):
+- [x] **Step 3.5 — `lib/domain/day/day.dart`:** replace fields + asserts (ops arrive in Task 5 — this step is model only):
 
 ```dart
 import 'package:freezed_annotation/freezed_annotation.dart';
@@ -564,9 +564,9 @@ abstract class Day with _$Day {
 }
 ```
 
-- [ ] **Step 3.6 — validators:** in `validators.dart` replace `MealValidation` with `MealSnapshotValidation` (same two rules, `items.isEmpty`, field `'items'`, import `meal_snapshot.dart`); `DayValidation` unchanged logic (`meals.map((m) => m.id)` still compiles against `ScheduledMeal`).
+- [x] **Step 3.6 — validators:** in `validators.dart` replace `MealValidation` with `MealSnapshotValidation` (same two rules, `items.isEmpty`, field `'items'`, import `meal_snapshot.dart`); `DayValidation` unchanged logic (`meals.map((m) => m.id)` still compiles against `ScheduledMeal`).
 
-- [ ] **Step 3.7 — nutrition instance fns:** append to `nutrition.dart`:
+- [x] **Step 3.7 — nutrition instance fns:** append to `nutrition.dart`:
 
 ```dart
 /// Macros of one snapshot item — plain unpack, absolutes were baked at
@@ -592,7 +592,7 @@ Macros consumedMealMacros(MealSnapshot meal) => meal.items
 
 (imports: add `../meal/food_snapshot.dart`, `../meal/meal_snapshot.dart`.)
 
-- [ ] **Step 3.8 — codegen** then **tests.** Rewrite `test/domain/meal/meal_test.dart` (model round-trips, `FoodSnapshot.from` math incl. a rounding case, `checked`/`anyChecked`/`allChecked`, UTC asserts throw on local stamps) and `test/domain/day/day_test.dart` (label asserts kept from old file; trio assert: setting only `adherence` throws, all three together OK; duplicate-id validate issue). Representative new tests (write all of these):
+- [x] **Step 3.8 — codegen** then **tests.** Rewrite `test/domain/meal/meal_test.dart` (model round-trips, `FoodSnapshot.from` math incl. a rounding case, `checked`/`anyChecked`/`allChecked`, UTC asserts throw on local stamps) and `test/domain/day/day_test.dart` (label asserts kept from old file; trio assert: setting only `adherence` throws, all three together OK; duplicate-id validate issue). Representative new tests (write all of these):
 
 ```dart
 // meal_test.dart (excerpt — full file covers each model)
@@ -631,7 +631,7 @@ test('frozen trio must be set together', () {
 });
 ```
 
-- [ ] **Step 3.9 — verify:** format → analyze → `flutter test` full suite green (day repo impl + its tests compile against new `Day` shape — adjust `test/data/repositories_test.dart` Day fixtures: `meals: []` still valid, `state:` argument deleted if present).
+- [x] **Step 3.9 — verify:** format → analyze → `flutter test` full suite green (day repo impl + its tests compile against new `Day` shape — adjust `test/data/repositories_test.dart` Day fixtures: `meals: []` still valid, `state:` argument deleted if present).
 
 **Acceptance:** ladder types exist with documented asserts; `meal.dart`/`meal_product.dart` gone; full suite green.
 **Out of scope:** derivation, ops, materialization.
@@ -648,7 +648,7 @@ test('frozen trio must be set together', () {
 
 **Skills:** `.agents/skills/dart-add-unit-test`, `.agents/skills/dart-use-pattern-matching`, `.agents/skills/dart-migrate-to-checks-package`.
 
-- [ ] **Step 4.1 — write the failing tests** (`meal_status_test.dart`) — table-driven over the chain. Full file:
+- [x] **Step 4.1 — write the failing tests** (`meal_status_test.dart`) — table-driven over the chain. Full file:
 
 ```dart
 import 'package:checks/checks.dart';
@@ -801,9 +801,9 @@ void main() {
 }
 ```
 
-- [ ] **Step 4.2 — run:** `flutter test test/domain/services/meal_status_test.dart` → FAIL (no `meal_status.dart`).
+- [x] **Step 4.2 — run:** `flutter test test/domain/services/meal_status_test.dart` → FAIL (no `meal_status.dart`).
 
-- [ ] **Step 4.3 — `lib/domain/services/meal_status.dart`:**
+- [x] **Step 4.3 — `lib/domain/services/meal_status.dart`:**
 
 ```dart
 import '../day/scheduled_meal.dart';
@@ -861,7 +861,7 @@ MealStatus deriveMealStatus(
 }
 ```
 
-- [ ] **Step 4.4 — run the file again:** green. Then `dart format .` → `flutter analyze` → `flutter test`.
+- [x] **Step 4.4 — run the file again:** green. Then `dart format .` → `flutter analyze` → `flutter test`.
 
 **Acceptance:** every chain rule + both rationale orderings (4>5, 5>6) covered by a named test; helpers tested; suite green.
 **Out of scope:** ops, predicates needing `Day`.
@@ -879,7 +879,7 @@ MealStatus deriveMealStatus(
 
 **Skills:** `.agents/skills/dart-add-unit-test`, `.agents/skills/dart-migrate-to-checks-package`.
 
-- [ ] **Step 5.1 — failing tests** (`day_ops_test.dart`). Full file:
+- [x] **Step 5.1 — failing tests** (`day_ops_test.dart`). Full file:
 
 ```dart
 import 'package:checks/checks.dart';
@@ -1080,9 +1080,9 @@ void main() {
 }
 ```
 
-- [ ] **Step 5.2 — run:** FAIL (methods missing).
+- [x] **Step 5.2 — run:** FAIL (methods missing).
 
-- [ ] **Step 5.3 — implement.** Append to the `Day` class body in `day.dart` (add imports `../shared/meal_time.dart`, `../meal/meal_snapshot.dart`, `../services/meal_status.dart`):
+- [x] **Step 5.3 — implement.** Append to the `Day` class body in `day.dart` (add imports `../shared/meal_time.dart`, `../meal/meal_snapshot.dart`, `../services/meal_status.dart`):
 
 ```dart
   // ───────────────────────── lifecycle ops (S05) ─────────────────────────
@@ -1217,7 +1217,7 @@ void main() {
 
 (also add `import '../shared/enums.dart';` for `MealStatus`.)
 
-- [ ] **Step 5.4 — `lib/domain/services/meal_lifecycle.dart`** (predicates; Task 6 appends to this file):
+- [x] **Step 5.4 — `lib/domain/services/meal_lifecycle.dart`** (predicates; Task 6 appends to this file):
 
 ```dart
 import '../day/day.dart';
@@ -1258,7 +1258,7 @@ DateTime maxSnoozeUntil(Day day, String mealId, DateTime now) =>
     day.maxSnoozeUntilFor(mealId, now);
 ```
 
-- [ ] **Step 5.5 — verify:** ops test file green → format → analyze → full `flutter test`.
+- [x] **Step 5.5 — verify:** ops test file green → format → analyze → full `flutter test`.
 
 **Acceptance:** every op × every guard has a test; predicates mirror ops; suite green.
 **Out of scope:** materialization, kcal.
@@ -1275,7 +1275,7 @@ DateTime maxSnoozeUntil(Day day, String mealId, DateTime now) =>
 
 **Skills:** `.agents/skills/dart-add-unit-test`, `.agents/skills/dart-migrate-to-checks-package`.
 
-- [ ] **Step 6.1 — failing tests** (`meal_lifecycle_test.dart`). Full file:
+- [x] **Step 6.1 — failing tests** (`meal_lifecycle_test.dart`). Full file:
 
 ```dart
 import 'package:checks/checks.dart';
@@ -1461,7 +1461,7 @@ void main() {
 }
 ```
 
-- [ ] **Step 6.2 — run:** FAIL. **Step 6.3 — append to `meal_lifecycle.dart`** (add imports: `../food/food.dart`, `../meal/food_snapshot.dart`, `../meal/meal_item.dart`, `../meal/meal_snapshot.dart`, `../meal/meal_template.dart`, `../plan/plan_template.dart`, `../shared/grams.dart` is pulled transitively — import what the analyzer asks, plus `../shared/macros.dart`, `nutrition.dart`):
+- [x] **Step 6.2 — run:** FAIL. **Step 6.3 — append to `meal_lifecycle.dart`** (add imports: `../food/food.dart`, `../meal/food_snapshot.dart`, `../meal/meal_item.dart`, `../meal/meal_snapshot.dart`, `../meal/meal_template.dart`, `../plan/plan_template.dart`, `../shared/grams.dart` is pulled transitively — import what the analyzer asks, plus `../shared/macros.dart`, `nutrition.dart`):
 
 ```dart
 /// The active plan covering [date]'s weekday (0=Mon…6=Sun). >1 match should
@@ -1545,11 +1545,11 @@ double consumedKcal(Day day) => consumedMacros(day).kcal;
 
 (Note: `buildDayFromPlan` takes `String Function() newId` rather than the data-layer `IdGenerator` class — domain cannot import `lib/data/`. The S06 controller passes `idGenerator.newId`.)
 
-- [ ] **Step 6.4 — verify:** green → format → analyze → full `flutter test`.
+- [x] **Step 6.4 — verify:** green → format → analyze → full `flutter test`.
 
-- [ ] **Step 6.5 — review pass:** run `@review` (nemotron) on the whole working-tree diff vs the spec (`docs/specs/2026-06-04-s05-meal-lifecycle.md`) + `AGENTS.md` invariants. Fix any `BLOCK`. Re-run format/analyze/test.
+- [x] **Step 6.5 — review pass:** run `@review` (nemotron) on the whole working-tree diff vs the spec (`docs/specs/2026-06-04-s05-meal-lifecycle.md`) + `AGENTS.md` invariants. Fix any `BLOCK`. Re-run format/analyze/test.
 
-- [ ] **Step 6.6 — report:** write `.opencode/handoff/2026-06-04-s05-meal-lifecycle.report.md` per the format in `docs/workflow.md` (status, per-task checklist, pasted real command output, files touched, deviations, blockers).
+- [x] **Step 6.6 — report:** write `.opencode/handoff/2026-06-04-s05-meal-lifecycle.report.md` per the format in `docs/workflow.md` (status, per-task checklist, pasted real command output, files touched, deviations, blockers).
 
 **Acceptance:** spec's test matrix fully covered (derivation, guards, bounds incl. same-time + `MealTime(0)`, materialization incl. dangling refs + sorting + tie-break, kcal incl. 0/0); `grep -rn "DateTime.now()" lib/domain/` empty; full suite green; report written.
 **Out of scope:** controllers, persistence orchestration, notifications.

@@ -111,6 +111,8 @@ The library `Food` (S02/S03, `FoodRepository`: 63-food seed + user customs from 
 
 > **Open obligation (S07/S09, not S05):** deleting a library food that templates still reference leaves a dangling `FoodRef`. Days are safe (they hold copies); template-side policy — block delete while referenced, or cascade-remove from templates — must be decided in S07/S09.
 
+> **Open obligation (S08, noted at S05 review):** `replaceMeal` doesn't reject a `newMeal` arriving with pre-checked items (equivalent to legal replace+check, no invariant broken — but fabricated `checkedAt` stamps would pollute analytics). S08's meal-editor contract must construct replacement `MealSnapshot`s with all items unchecked.
+
 ---
 
 ## 2. Status derivation (pure function)

@@ -22,7 +22,7 @@ Status legend: ✅ done · ◻ not started.
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| S05 | Meal lifecycle engine | logic | S02 | status derivation (all/some/none), partial-kcal, lenient-miss + midnight lock, day-source-of-truth, snooze constraints. |
+| ✅ | Meal lifecycle engine (S05) | logic | S02 | Done `c441cef`. Product→Food rename (`FoodKind`, `kcalPer100g`, no override); instance ladder `Day→ScheduledMeal→MealSnapshot→MealItem→FoodSnapshot` (absolutes baked); Day frozen trio (`adherence`+`thresholdUsed`+`lockedAt`, `DayState` derived); status chain; Day ops + guards; snooze bounds; CoW materialization fns; day kcal. Spec: `2026-06-04-s05-*`; design: `docs/design/domain/2026-06-03-s05-*`. |
 | S06 | Today screen | ui | S03,S04,S05 | intake card (consumed vs planned), macro bars, streak chip, day-picker, meal list. |
 
 ## Phase 2 — Food & meals

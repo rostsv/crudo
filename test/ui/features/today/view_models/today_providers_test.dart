@@ -1,6 +1,8 @@
 import 'package:checks/checks.dart';
 import 'package:crudo/config/di.dart';
+import 'package:crudo/domain/shared/macros.dart';
 import 'package:crudo/domain/streak/streak.dart';
+import 'package:crudo/ui/features/today/view_models/intake_freeze.dart';
 import 'package:crudo/ui/features/today/view_models/today_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -78,5 +80,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('7'), findsOneWidget);
+  });
+
+  group('intakeFreezeProvider', () {
+    test('null by default; freeze holds; clear resets', () {
+      final c = ProviderContainer.test();
+      check(c.read(intakeFreezeProvider)).isNull();
+      const snap = Macros(protein: 10, carbs: 20, fats: 5);
+      c.read(intakeFreezeProvider.notifier).freeze(snap);
+      check(c.read(intakeFreezeProvider)).equals(snap);
+      c.read(intakeFreezeProvider.notifier).clear();
+      check(c.read(intakeFreezeProvider)).isNull();
+    });
   });
 }

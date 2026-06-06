@@ -39,6 +39,27 @@ bool canSnoozeMeal(Day day, String mealId, DateTime now, DateTime today) {
   return maxSnoozeUntil(day, mealId, now).isAfter(now);
 }
 
+bool canUnmarkMeal(Day day, String mealId, DateTime today) {
+  if (isDayLocked(day, today)) return false;
+  final meal = day.meals.where((m) => m.id == mealId).firstOrNull;
+  return meal != null && meal.meal.anyChecked;
+}
+
+/// Snooze base (S06.1): presets are relative to when the meal is DUE, not
+/// to the tap — max(now, the meal's local instant on its day), as UTC.
+/// A future meal snoozed early gets scheduledTime + preset; a past-due
+/// meal gets now + preset. Re-snooze recomputes from the same base
+/// (snoozeMeal overwrites) — never compounds.
+DateTime snoozeBaseFor(Day day, String mealId, DateTime now) {
+  final meal = day.meals.firstWhere(
+    (m) => m.id == mealId,
+    orElse: () => throw StateError('no meal with id $mealId'),
+  );
+  final scheduled = localInstantAt(day.date, meal.time).toUtc();
+  final nowUtc = now.toUtc();
+  return scheduled.isAfter(nowUtc) ? scheduled : nowUtc;
+}
+
 /// min(next meal by time strictly greater, end-of-day midnight) as UTC.
 DateTime maxSnoozeUntil(Day day, String mealId, DateTime now) =>
     day.maxSnoozeUntilFor(mealId, now);

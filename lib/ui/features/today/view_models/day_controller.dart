@@ -58,6 +58,9 @@ class DayController extends _$DayController {
   Future<void> skipMeal(String mealId) =>
       _apply((d, now, today) => d.skipMeal(mealId, now, today));
 
+  Future<void> unmarkAll(String mealId) =>
+      _apply((d, now, today) => d.unmarkAll(mealId, today));
+
   Future<void> snooze(String mealId, DateTime until) =>
       _apply((d, now, today) => d.snoozeMeal(mealId, until, now, today));
 

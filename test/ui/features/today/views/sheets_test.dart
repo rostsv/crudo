@@ -91,7 +91,7 @@ void main() {
         expect(find.textContaining('08:00'), findsOneWidget);
         expect(find.byKey(const ValueKey('item-check-0')), findsOneWidget);
         expect(find.byKey(const ValueKey('item-check-3')), findsOneWidget);
-        expect(find.text('Ate it'), findsOneWidget);
+        expect(find.text('Mark Done'), findsOneWidget);
       },
     );
 
@@ -113,13 +113,47 @@ void main() {
       check(day.meals.first.meal.items.first.checked).isFalse();
     });
 
-    testWidgets('Ate it marks all and closes', (tester) async {
+    testWidgets('Mark Done with 0 checked marks all and closes', (
+      tester,
+    ) async {
       await open(tester, (c) => mealSheetOpener(c));
-      await tester.tap(find.text('Ate it'));
+      await tester.tap(find.text('Mark Done'));
       await tester.pumpAndSettle();
-      expect(find.text('Ate it'), findsNothing); // sheet closed
+      expect(find.text('Mark Done'), findsNothing); // sheet closed
       final day = await container.read(dayControllerProvider(today).future);
       check(day.meals.first.meal.allChecked).isTrue();
+    });
+
+    testWidgets('Save Partial with some checked just closes, keeps state', (
+      tester,
+    ) async {
+      await open(tester, (c) => mealSheetOpener(c));
+      // Check one item → partial
+      await tester.tap(find.byKey(const ValueKey('item-check-0')));
+      await tester.pumpAndSettle();
+      expect(find.text('Save Partial'), findsOneWidget);
+      await tester.tap(find.text('Save Partial'));
+      await tester.pumpAndSettle();
+      expect(find.text('Save Partial'), findsNothing); // sheet closed
+      final day = await container.read(dayControllerProvider(today).future);
+      check(day.meals.first.meal.items.first.checked).isTrue();
+      check(day.meals.first.meal.allChecked).isFalse();
+    });
+
+    testWidgets('Mark Done with all checked just closes, no re-mark', (
+      tester,
+    ) async {
+      await open(tester, (c) => mealSheetOpener(c));
+      // Mark all via controller so the sheet opens with all checked.
+      final day0 = await container.read(dayControllerProvider(today).future);
+      final id = day0.meals.first.id;
+      await container
+          .read(dayControllerProvider(today).notifier)
+          .markAllEaten(id);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Mark Done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Mark Done'), findsNothing);
     });
 
     testWidgets('Skip skips and closes', (tester) async {
@@ -130,23 +164,37 @@ void main() {
       check(day.meals.first.skippedAt).isNotNull();
     });
 
-    testWidgets('readOnly hides all actions; item taps are inert', (
+    testWidgets('readOnly hides tiles and footer; item taps are inert', (
       tester,
     ) async {
       await open(tester, (c) => mealSheetOpener(c, readOnly: true));
-      expect(find.text('Ate it'), findsNothing);
+      expect(find.text('Mark Done'), findsNothing);
       expect(find.text('Skip'), findsNothing);
+      expect(find.byKey(const ValueKey('tile-snooze')), findsNothing);
+      expect(find.byKey(const ValueKey('tile-swap')), findsNothing);
       await tester.tap(find.byKey(const ValueKey('item-check-0')));
       await tester.pumpAndSettle();
       final day = await container.read(dayControllerProvider(today).future);
       check(day.meals.first.meal.anyChecked).isFalse();
     });
 
-    testWidgets('Snooze action opens the snooze sheet', (tester) async {
+    testWidgets('snooze tile opens SnoozeSheet; disabled when guard fails', (
+      tester,
+    ) async {
       await open(tester, (c) => mealSheetOpener(c));
-      await tester.tap(find.text('Snooze'));
+      await tester.tap(find.byKey(const ValueKey('tile-snooze')));
       await tester.pumpAndSettle();
       expect(find.text('Snooze, then eat.'), findsOneWidget);
+    });
+
+    testWidgets('swap tile renders and tap is a no-op', (tester) async {
+      await open(tester, (c) => mealSheetOpener(c));
+      expect(find.byKey(const ValueKey('tile-swap')), findsOneWidget);
+      // Tapping the swap tile should be a no-op (null onTap).
+      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.pumpAndSettle();
+      // Sheet stays open, nothing changed.
+      expect(find.text('Protein Oats Bowl'), findsOneWidget);
     });
   });
 
@@ -167,12 +215,12 @@ void main() {
         expect(find.byKey(ValueKey('snooze-preset-$m')), findsOneWidget);
       }
       expect(find.text('Snooze 15m'), findsOneWidget); // default selection
-      // Confirm 15 → snoozedUntil = 16:10 local, stored UTC.
+      // Confirm 15 → snoozedUntil = 16:15 local (base = scheduled 16:00), stored UTC.
       await tester.tap(find.byType(PrimaryCta));
       await tester.pumpAndSettle();
       final day = await container.read(dayControllerProvider(today).future);
       final snack = day.meals.firstWhere((m) => m.id == 'sm-2');
-      check(snack.snoozedUntil).equals(DateTime(2026, 6, 4, 16, 10).toUtc());
+      check(snack.snoozedUntil).equals(DateTime(2026, 6, 4, 16, 15).toUtc());
     });
 
     testWidgets(
@@ -205,16 +253,76 @@ void main() {
       check(day.meals.firstWhere((m) => m.id == 'sm-2').snoozedUntil).isNull();
     });
 
-    testWidgets(
-      'preferred preset disabled → defaults to the largest enabled one',
-      (tester) async {
-        // 18:48 — next slot (dinner) 19:00. Only +10 (18:58) fits; 15/20/30
-        // exceed the bound, so the sheet must open with 10 selected.
-        now = DateTime(2026, 6, 4, 18, 48);
-        await open(tester, (c) => snoozeOpener(c));
-        expect(find.text('Snooze 10m'), findsOneWidget);
-      },
-    );
+    testWidgets('future meal: presets offset from scheduled time', (
+      tester,
+    ) async {
+      now = DateTime(2026, 6, 4, 15, 55);
+      await open(tester, (c) => snoozeOpener(c));
+      // base = scheduled 16:00; +15m → 16:15
+      await tester.tap(find.text('Snooze 15m'));
+      await tester.pumpAndSettle();
+      final day = await container.read(dayControllerProvider(today).future);
+      final snack = day.meals.firstWhere((m) => m.id == 'sm-2');
+      check(snack.snoozedUntil).equals(DateTime(2026, 6, 4, 16, 15).toUtc());
+    });
+
+    testWidgets('past-due meal: presets offset from now', (tester) async {
+      now = DateTime(2026, 6, 4, 16, 40);
+      await open(tester, (c) => snoozeOpener(c));
+      // base = now 16:40; +15m → 16:55
+      await tester.tap(find.text('Snooze 15m'));
+      await tester.pumpAndSettle();
+      final day = await container.read(dayControllerProvider(today).future);
+      final snack = day.meals.firstWhere((m) => m.id == 'sm-2');
+      check(snack.snoozedUntil).equals(DateTime(2026, 6, 4, 16, 55).toUtc());
+    });
+
+    testWidgets('MealSheet header shows snoozed time after commit', (
+      tester,
+    ) async {
+      now = DateTime(2026, 6, 4, 15, 55);
+      await open(tester, (c) => mealSheetOpener(c, mealId: 'sm-2'));
+      await tester.tap(find.byKey(const ValueKey('tile-snooze')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Snooze 15m'));
+      await tester.pumpAndSettle();
+      // Back on MealSheet: header shows the snoozed time (16:00 → 16:15).
+      expect(find.textContaining('16:00 → 16:15'), findsOneWidget);
+    });
+
+    testWidgets('future meal: presets offset from scheduled time', (
+      tester,
+    ) async {
+      now = DateTime(2026, 6, 4, 15, 55);
+      await open(tester, (c) => snoozeOpener(c));
+      // base = scheduled 16:00; +15m → 16:15
+      await tester.tap(find.byType(PrimaryCta));
+      await tester.pumpAndSettle();
+      final day = await container.read(dayControllerProvider(today).future);
+      final snack = day.meals.firstWhere((m) => m.id == 'sm-2');
+      check(snack.snoozedUntil).equals(DateTime(2026, 6, 4, 16, 15).toUtc());
+    });
+
+    testWidgets('past-due meal: presets offset from now', (tester) async {
+      now = DateTime(2026, 6, 4, 16, 40);
+      await open(tester, (c) => snoozeOpener(c));
+      // base = now 16:40; +15m → 16:55
+      await tester.tap(find.byType(PrimaryCta));
+      await tester.pumpAndSettle();
+      final day = await container.read(dayControllerProvider(today).future);
+      final snack = day.meals.firstWhere((m) => m.id == 'sm-2');
+      check(snack.snoozedUntil).equals(DateTime(2026, 6, 4, 16, 55).toUtc());
+    });
+
+    testWidgets('preset tiles show resulting local times', (tester) async {
+      now = DateTime(2026, 6, 4, 15, 55);
+      await open(tester, (c) => snoozeOpener(c));
+      // base = 16:00; tiles should show 16:10, 16:15, 16:20, 16:30
+      expect(find.text('16:10'), findsOneWidget);
+      expect(find.text('16:15'), findsOneWidget);
+      expect(find.text('16:20'), findsOneWidget);
+      expect(find.text('16:30'), findsOneWidget);
+    });
   });
 }
 

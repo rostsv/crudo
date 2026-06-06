@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../domain/shared/macros.dart';
 import '../../../core/themes/colors.dart';
-import '../../../core/themes/dimensions.dart';
+import '../../../core/themes/dimensions.dart' as dim;
 import '../../../core/themes/typography.dart';
 import '../../../core/widgets/macro_ring.dart';
 
@@ -16,6 +16,7 @@ class IntakeCard extends StatelessWidget {
   final Macros planned;
 
   static const _ringSize = 72.0; // component size, 4px grid
+  static const _settleCurve = Curves.easeOutCubic;
 
   double _share(double v, double t) => t <= 0 ? 0 : v / t;
 
@@ -23,11 +24,11 @@ class IntakeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
     return Container(
-      padding: const EdgeInsets.all(Spacing.lg),
+      padding: const EdgeInsets.all(dim.Spacing.lg),
       decoration: BoxDecoration(
         color: colors.surfaceLowest,
-        borderRadius: Radii.all(Radii.xl),
-        boxShadow: Shadows.cloud,
+        borderRadius: dim.Radii.all(dim.Radii.xl),
+        boxShadow: dim.Shadows.cloud,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,7 +41,7 @@ class IntakeCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text("TODAY'S INTAKE", style: CrudoText.label),
-                    const SizedBox(height: Spacing.sm),
+                    const SizedBox(height: dim.Spacing.sm),
                     // scaleDown guards narrow screens / 5-digit kcal —
                     // at normal widths it renders 1:1.
                     FittedBox(
@@ -50,11 +51,14 @@ class IntakeCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.baseline,
                         textBaseline: TextBaseline.alphabetic,
                         children: [
-                          Text(
-                            '${consumed.kcal.round()}',
-                            style: CrudoText.stat,
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(end: consumed.kcal),
+                            duration: dim.Durations.slow,
+                            curve: _settleCurve,
+                            builder: (context, kcal, child) =>
+                                Text('${kcal.round()}', style: CrudoText.stat),
                           ),
-                          const SizedBox(width: Spacing.xs),
+                          const SizedBox(width: dim.Spacing.xs),
                           Text(
                             '/${planned.kcal.round()} kcal',
                             style: CrudoText.bodyLg.copyWith(
@@ -67,18 +71,21 @@ class IntakeCard extends StatelessWidget {
                   ],
                 ),
               ),
-              MacroRing(
-                value: _share(consumed.kcal, planned.kcal),
-                size: _ringSize,
-                center: Icon(
+              TweenAnimationBuilder<double>(
+                tween: Tween(end: _share(consumed.kcal, planned.kcal)),
+                duration: dim.Durations.slow,
+                curve: _settleCurve,
+                builder: (_, v, child) =>
+                    MacroRing(value: v, size: _ringSize, center: child),
+                child: Icon(
                   Icons.local_fire_department_outlined,
-                  size: IconSizes.lg,
+                  size: dim.IconSizes.lg,
                   color: colors.primary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: Spacing.lg),
+          const SizedBox(height: dim.Spacing.lg),
           Row(
             children: [
               Expanded(
@@ -89,7 +96,7 @@ class IntakeCard extends StatelessWidget {
                   color: colors.primary,
                 ),
               ),
-              const SizedBox(width: Spacing.md),
+              const SizedBox(width: dim.Spacing.md),
               Expanded(
                 child: _MacroBar(
                   label: 'Carbs',
@@ -98,7 +105,7 @@ class IntakeCard extends StatelessWidget {
                   color: colors.gold,
                 ),
               ),
-              const SizedBox(width: Spacing.md),
+              const SizedBox(width: dim.Spacing.md),
               Expanded(
                 child: _MacroBar(
                   label: 'Fats',
@@ -133,48 +140,59 @@ class _MacroBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
-    final share = total <= 0 ? 0.0 : (value / total).clamp(0.0, 1.0);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+    return TweenAnimationBuilder<double>(
+      tween: Tween(end: value),
+      duration: dim.Durations.slow,
+      curve: Curves.easeOutCubic,
+      builder: (context, v, _) {
+        final share = total <= 0 ? 0.0 : (v / total).clamp(0.0, 1.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: CrudoText.labelMd.copyWith(color: colors.onSurfaceVar),
-              ),
+            Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: CrudoText.labelMd.copyWith(
+                      color: colors.onSurfaceVar,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: dim.Spacing.xs),
+                // The value scales down a hair when label+value exceed the
+                // bar column ('Protein' + '82/140g' is ~2px over at 390px).
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      '${v.round()}/${total.round()}g',
+                      style: CrudoText.labelMd.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: Spacing.xs),
-            // The value scales down a hair when label+value exceed the
-            // bar column ('Protein' + '82/140g' is ~2px over at 390px).
-            Expanded(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerRight,
-                child: Text(
-                  '${value.round()}/${total.round()}g',
-                  style: CrudoText.labelMd.copyWith(color: colors.onSurface),
+            const SizedBox(height: dim.Spacing.xs),
+            ClipRRect(
+              borderRadius: dim.Radii.all(dim.Radii.full),
+              child: SizedBox(
+                height: _barHeight,
+                child: LinearProgressIndicator(
+                  value: share,
+                  backgroundColor: colors.outline,
+                  valueColor: AlwaysStoppedAnimation(color),
                 ),
               ),
             ),
           ],
-        ),
-        const SizedBox(height: Spacing.xs),
-        ClipRRect(
-          borderRadius: Radii.all(Radii.full),
-          child: SizedBox(
-            height: _barHeight,
-            child: LinearProgressIndicator(
-              value: share,
-              backgroundColor: colors.outline,
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

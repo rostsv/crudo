@@ -6,6 +6,7 @@ import 'package:crudo/domain/meal/meal_template.dart';
 import 'package:crudo/domain/plan/plan_slot.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
 import 'package:crudo/domain/services/meal_lifecycle.dart';
+import 'package:crudo/domain/services/meal_status.dart';
 import 'package:crudo/domain/shared/enums.dart';
 import 'package:crudo/domain/shared/grams.dart';
 import 'package:crudo/domain/shared/meal_time.dart';
@@ -189,5 +190,64 @@ void main() {
         check(consumedMacros(d).kcal).isCloseTo(consumedKcal(d), 1e-9);
       },
     );
+  });
+
+  group('snoozeBaseFor', () {
+    Day d() => buildDayFromPlan(
+      _plan(),
+      thursday,
+      _SeqIds().newId,
+      [_breakfastTpl, _lunchTpl],
+      [_egg, _rice],
+    );
+
+    test('future meal → its scheduled instant (UTC)', () {
+      // now = local 10:00, lunch scheduled 13:00
+      final base = snoozeBaseFor(d(), 'id-1', DateTime(2026, 6, 4, 10));
+      check(base).equals(
+        localInstantAt(
+          DateTime.utc(2026, 6, 4),
+          const MealTime(13 * 60),
+        ).toUtc(),
+      );
+      check(base.isUtc).isTrue();
+    });
+    test('past-due meal → now', () {
+      final now = DateTime(2026, 6, 4, 15, 40); // breakfast 08:00 long passed
+      check(snoozeBaseFor(d(), 'id-0', now)).equals(now.toUtc());
+    });
+    test('unknown meal throws', () {
+      check(
+        () => snoozeBaseFor(d(), 'nope', DateTime(2026, 6, 4, 10)),
+      ).throws<StateError>();
+    });
+  });
+
+  group('canUnmarkMeal', () {
+    final now = DateTime(2026, 6, 4, 12);
+    final today = thursday;
+    final dayChecked = buildDayFromPlan(
+      _plan(),
+      thursday,
+      _SeqIds().newId,
+      [_breakfastTpl, _lunchTpl],
+      [_egg, _rice],
+    ).markAllEaten('id-1', now, today);
+    final dayUnchecked = buildDayFromPlan(
+      _plan(),
+      thursday,
+      _SeqIds().newId,
+      [_breakfastTpl, _lunchTpl],
+      [_egg, _rice],
+    );
+
+    test('true only when unlocked and any item checked', () {
+      check(canUnmarkMeal(dayChecked, 'id-1', today)).isTrue();
+      check(canUnmarkMeal(dayUnchecked, 'id-1', today)).isFalse();
+      check(
+        canUnmarkMeal(dayChecked, 'id-1', DateTime.utc(2026, 6, 5)),
+      ).isFalse(); // locked
+      check(canUnmarkMeal(dayChecked, 'nope', today)).isFalse();
+    });
   });
 }

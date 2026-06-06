@@ -171,6 +171,37 @@ void main() {
     sub.close();
   });
 
+  test('unmarkAll clears checks, persists and re-emits', () async {
+    final c = container();
+    final sub = c.listen(dayControllerProvider(today), (prev, next) {});
+    final day = await c.read(dayControllerProvider(today).future);
+    final mealId = day.meals.first.id;
+    await c.read(dayControllerProvider(today).notifier).markAllEaten(mealId);
+    await Future<void>.delayed(Duration.zero);
+    await c.read(dayControllerProvider(today).notifier).unmarkAll(mealId);
+    await Future<void>.delayed(Duration.zero);
+    final updated = await c.read(dayControllerProvider(today).future);
+    final meal = updated.meals.firstWhere((m) => m.id == mealId);
+    check(meal.meal.items.every((i) => !i.checked)).isTrue();
+    // persisted: repo snapshot agrees
+    final persisted = await c.read(dayRepositoryProvider).getByDate(today);
+    check(
+      persisted!.meals.firstWhere((m) => m.id == mealId).meal.anyChecked,
+    ).isFalse();
+    sub.close();
+  });
+
+  test('unmarkAll guard: nothing checked → StateError, no write', () async {
+    final c = container();
+    final sub = c.listen(dayControllerProvider(today), (prev, next) {});
+    final day = await c.read(dayControllerProvider(today).future);
+    final mealId = day.meals.first.id;
+    await check(
+      c.read(dayControllerProvider(today).notifier).unmarkAll(mealId),
+    ).throws<StateError>();
+    sub.close();
+  });
+
   test(
     'rollover: refresh() locks yesterday and re-materializes new today',
     () async {

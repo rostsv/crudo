@@ -14,12 +14,14 @@ import '../../../core/themes/typography.dart';
 import '../../../core/widgets/meal_card.dart';
 import '../../../core/widgets/toast.dart';
 import '../view_models/day_controller.dart';
+import '../view_models/intake_freeze.dart';
 import '../view_models/today_providers.dart';
 import 'day_strip.dart';
 import 'formatting.dart';
 import 'intake_card.dart';
 import 'meal_sheet.dart';
 import 'nudge_card.dart';
+import 'sheet_actions.dart';
 import 'streak_chip.dart';
 
 /// The Today tab (S06 spec): appbar (date + greeting + calendar stub) ·
@@ -85,6 +87,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
     final dayAsync = ref.watch(dayControllerProvider(selected));
     final profile = ref.watch(profileProvider).value;
     final streak = ref.watch(streakCountProvider).value ?? 0;
+    final frozen = ref.watch(intakeFreezeProvider);
     final now = ref.read(clockProvider)();
     final isToday = selected.isAtSameMomentAs(today);
     final isPast = selected.isBefore(today);
@@ -124,7 +127,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                 clipBehavior: Clip.none,
                 children: [
                   IntakeCard(
-                    consumed: consumedMacros(day),
+                    consumed: frozen ?? consumedMacros(day),
                     planned: plannedMacros(day),
                   ),
                   Positioned(
@@ -170,12 +173,40 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                         status: status,
                         onTap: selected.isAfter(today)
                             ? null
-                            : () => showMealSheet(
-                                context,
-                                date: selected,
-                                mealId: meal.id,
-                                readOnly: !isToday,
-                              ),
+                            : () {
+                                if (isToday) {
+                                  ref
+                                      .read(intakeFreezeProvider.notifier)
+                                      .freeze(consumedMacros(day));
+                                }
+                                showMealSheet(
+                                  context,
+                                  date: selected,
+                                  mealId: meal.id,
+                                  readOnly: !isToday,
+                                ).whenComplete(() {
+                                  if (isToday) {
+                                    ref
+                                        .read(intakeFreezeProvider.notifier)
+                                        .clear();
+                                  }
+                                });
+                              },
+                        onStatusTap: !isToday
+                            ? null
+                            : () {
+                                final ctrl = ref.read(
+                                  dayControllerProvider(selected).notifier,
+                                );
+                                runDayOp(
+                                  context,
+                                  () => status == MealStatus.done
+                                      ? ctrl.unmarkAll(meal.id)
+                                      : ctrl.markAllEaten(meal.id),
+                                  guardMessage:
+                                      "That can't be changed anymore.",
+                                );
+                              },
                       );
                     },
                   ),

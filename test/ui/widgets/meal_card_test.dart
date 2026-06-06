@@ -17,6 +17,7 @@ MealCard _card({
   MealStatus status = MealStatus.upcoming,
   List<String> ingredientNames = const ['Eggs', 'Yogurt', 'Oats', 'Berries'],
   VoidCallback? onTap,
+  VoidCallback? onStatusTap,
 }) => MealCard(
   title: 'Protein Bowl',
   timeLabel: '08:00',
@@ -25,6 +26,7 @@ MealCard _card({
   ingredientNames: ingredientNames,
   status: status,
   onTap: onTap,
+  onStatusTap: onStatusTap,
 );
 
 void main() {
@@ -78,6 +80,47 @@ void main() {
     await tester.pumpWidget(_wrap(_card(onTap: () => taps++)));
     await tester.tap(find.text('Protein Bowl'));
     check(taps).equals(1);
+  });
+
+  testWidgets('status circle tap fires onStatusTap, not onTap', (tester) async {
+    var cardTaps = 0;
+    var statusTaps = 0;
+    await tester.pumpWidget(
+      _wrap(_card(onTap: () => cardTaps++, onStatusTap: () => statusTaps++)),
+    );
+    // Tap the status circle — should fire onStatusTap, not onTap.
+    await tester.tap(find.byKey(const ValueKey('meal-status-upcoming')));
+    check(statusTaps).equals(1);
+    check(cardTaps).equals(0);
+  });
+
+  testWidgets('null onStatusTap: circle tap falls through to card onTap', (
+    tester,
+  ) async {
+    var cardTaps = 0;
+    await tester.pumpWidget(
+      _wrap(_card(onTap: () => cardTaps++, onStatusTap: null)),
+    );
+    await tester.tap(find.byKey(const ValueKey('meal-status-upcoming')));
+    check(cardTaps).equals(1);
+  });
+
+  testWidgets('semantics label: Mark eaten / Undo', (tester) async {
+    await tester.pumpWidget(
+      _wrap(_card(status: MealStatus.upcoming, onStatusTap: () {})),
+    );
+    final upcoming = tester.getSemantics(
+      find.byKey(const ValueKey('meal-status-upcoming')),
+    );
+    check(upcoming.label).equals('Mark Protein Bowl eaten');
+
+    await tester.pumpWidget(
+      _wrap(_card(status: MealStatus.done, onStatusTap: () {})),
+    );
+    final done = tester.getSemantics(
+      find.byKey(const ValueKey('meal-status-done')),
+    );
+    check(done.label).equals('Undo Protein Bowl');
   });
 
   testWidgets(

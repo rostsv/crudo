@@ -6,6 +6,7 @@ import 'package:crudo/domain/meal/food_snapshot.dart';
 import 'package:crudo/domain/meal/meal_item.dart';
 import 'package:crudo/domain/meal/meal_snapshot.dart';
 import 'package:crudo/domain/services/meal_lifecycle.dart';
+import 'package:crudo/domain/services/meal_status.dart';
 import 'package:crudo/domain/shared/grams.dart';
 import 'package:crudo/domain/shared/meal_time.dart';
 import 'package:crudo/domain/shared/enums.dart';
@@ -231,6 +232,42 @@ void main() {
       // predicate mirrors
       check(canEditMealContent(day().meals[1], today, after)).isFalse();
       check(canEditMealContent(day().meals[1], today, now)).isTrue();
+    });
+  });
+
+  group('unmarkAll', () {
+    test('clears every checkedAt', () {
+      final d = day(checkedOf2: 2).unmarkAll('lunch', today);
+      check(d.meals[1].meal.items[0].checkedAt).isNull();
+      check(d.meals[1].meal.items[1].checkedAt).isNull();
+    });
+    test('preserves skippedAt and snoozedUntil', () {
+      final skipped = day().skipMeal('lunch', now, today);
+      final done = skipped.markAllEaten('lunch', now, today);
+      final undone = done.unmarkAll('lunch', today);
+      check(undone.meals[1].skippedAt).isNotNull();
+    });
+    test('round-trip: skipped → done → skipped derivation', () {
+      final skipped = day().skipMeal('lunch', now, today);
+      final done = skipped.markAllEaten('lunch', now, today);
+      check(
+        deriveMealStatus(done.meals[1], today, now),
+      ).equals(MealStatus.done);
+      final undone = done.unmarkAll('lunch', today);
+      check(
+        deriveMealStatus(undone.meals[1], today, now),
+      ).equals(MealStatus.skipped);
+    });
+    test('throws when nothing is checked', () {
+      check(() => day().unmarkAll('lunch', today)).throws<StateError>();
+    });
+    test('throws on a locked day', () {
+      check(
+        () => day(checkedOf2: 1).unmarkAll('lunch', DateTime.utc(2026, 6, 5)),
+      ).throws<StateError>();
+    });
+    test('throws on unknown meal id', () {
+      check(() => day().unmarkAll('nope', today)).throws<StateError>();
     });
   });
 }

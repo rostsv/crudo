@@ -28,6 +28,9 @@ abstract final class Shadows {
 abstract final class Durations {
   static const fast = Duration(milliseconds: 150);
   static const base = Duration(milliseconds: 200);
+
+  /// Intake-hero settle (S06.1): number roll, bar growth, ring sweep.
+  static const slow = Duration(milliseconds: 500);
 }
 
 /// Alpha levels for derived colors — never inline a raw alpha in a widget.

@@ -224,11 +224,18 @@ Light stroke weight (1–1.5px) to match Manrope. Consistent family (Phosphor Li
 ## 9. Motion
 
 Subtle and functional, never decorative.
+
+| Token | Duration | Usage |
+|---|---|---|
+| `Durations.fast` | 150 ms | Chips, quick tint shifts |
+| `Durations.base` | 200 ms | Progress bars, selection pulses |
+| `Durations.slow` | 500 ms | Intake-hero settle: number roll, bar growth, ring sweep |
+
 - Screen transitions: horizontal slide for step progression.
 - Selection: quick scale pulse / background tint shift on tap.
 - CTA: no idle animation; press darkens gradient ~10% (`scale(.985)`).
-- Progress bar: segment fill animates on step change (~200ms ease).
-- Chips: background color transition (~150ms). Sheets: slide-up; modals: pop-in.
+- Progress bar: segment fill animates on step change (~200 ms ease).
+- Chips: background color transition (~150 ms). Sheets: slide-up; modals: pop-in.
 
 ---
 

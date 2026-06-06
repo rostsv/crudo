@@ -39,8 +39,7 @@
     },
 
     "review": {
-      "model": "opencode/nemotron-3-super-free",
-      "mode": "subagent",
+      "model": "opencode/nemotron-3-ultra-free",
       "permission": {
         "edit": {
           "**": "deny",

@@ -22,6 +22,7 @@ class MealCard extends StatelessWidget {
     this.ingredientNames = const <String>[],
     this.snoozedTimeLabel,
     this.onTap,
+    this.onStatusTap,
     super.key,
   });
 
@@ -44,8 +45,14 @@ class MealCard extends StatelessWidget {
   final MealStatus status;
   final VoidCallback? onTap;
 
+  /// One-tap complete/undo on the status circle. Null = circle is inert
+  /// (past/future days). The card stays dumb: the caller decides what a
+  /// tap means for the current status.
+  final VoidCallback? onStatusTap;
+
   static const _previewCount = 3;
   static const _barHeight = 44.0; // component size, 4px grid
+  static const _statusTapTarget = 44.0; // min touch target, 4px grid (§5)
 
   /// "Eggs · Yogurt · Oats · +1 more" — first 3 names, rest collapsed.
   String get ingredientPreview {
@@ -161,9 +168,25 @@ class MealCard extends StatelessWidget {
             ),
             const SizedBox(width: Spacing.md),
             Center(
-              child: _StatusCircle(
-                status: status,
-                key: ValueKey('meal-status-${status.name}'),
+              child: Semantics(
+                button: onStatusTap != null,
+                label: status == MealStatus.done
+                    ? 'Undo $title'
+                    : 'Mark $title eaten',
+                child: GestureDetector(
+                  onTap: onStatusTap,
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: _statusTapTarget,
+                    height: _statusTapTarget,
+                    child: Center(
+                      child: _StatusCircle(
+                        status: status,
+                        key: ValueKey('meal-status-${status.name}'),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
           ],

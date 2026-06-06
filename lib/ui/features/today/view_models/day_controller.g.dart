@@ -65,7 +65,7 @@ final class DayControllerProvider
   }
 }
 
-String _$dayControllerHash() => r'c1cb9fbc64bf1bde6cf6cb61a83e2657b30ce951';
+String _$dayControllerHash() => r'88f53b954fafe70c692e82d8419384d4de6f3a7f';
 
 /// Day resolution per S05 §4.3 — the contract the engine left to S06:
 /// repo hit wins (snapshot authoritative, never re-materialized) → past

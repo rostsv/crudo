@@ -9,6 +9,7 @@ import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
 import '../view_models/day_controller.dart';
 import '../view_models/today_providers.dart';
+import 'formatting.dart';
 import 'sheet_actions.dart';
 
 /// The canned snooze durations (minutes) — sheets.jsx SnoozeSheet.
@@ -38,10 +39,11 @@ class _SnoozeSheetState extends ConsumerState<SnoozeSheet> {
     final day = ref.watch(dayControllerProvider(widget.date)).value;
     if (day == null) return const SizedBox.shrink();
     final now = ref.watch(clockProvider)();
+    final base = snoozeBaseFor(day, widget.mealId, now);
     final bound = maxSnoozeUntil(day, widget.mealId, now);
 
-    bool enabled(int m) =>
-        !now.add(Duration(minutes: m)).toUtc().isAfter(bound);
+    DateTime untilFor(int m) => base.add(Duration(minutes: m));
+    bool enabled(int m) => !untilFor(m).toUtc().isAfter(bound);
 
     // Default: the preferred preset, else the largest still-enabled one —
     // never open on a dead selection + disabled CTA.
@@ -75,6 +77,9 @@ class _SnoozeSheetState extends ConsumerState<SnoozeSheet> {
                     minutes: m,
                     selected: selected == m,
                     enabled: enabled(m),
+                    resultLabel: enabled(m)
+                        ? timeOfDayLabel(untilFor(m).toLocal())
+                        : null,
                     colors: colors,
                     onTap: () => setState(() => _selected = m),
                   ),
@@ -103,10 +108,7 @@ class _SnoozeSheetState extends ConsumerState<SnoozeSheet> {
                 context,
                 () => ref
                     .read(dayControllerProvider(widget.date).notifier)
-                    .snooze(
-                      widget.mealId,
-                      now.add(Duration(minutes: selected)),
-                    ),
+                    .snooze(widget.mealId, untilFor(selected)),
                 guardMessage: "Can't snooze that far.",
                 pop: true,
               ),
@@ -123,6 +125,7 @@ class _PresetTile extends StatelessWidget {
     required this.minutes,
     required this.selected,
     required this.enabled,
+    this.resultLabel,
     required this.colors,
     required this.onTap,
     super.key,
@@ -131,6 +134,7 @@ class _PresetTile extends StatelessWidget {
   final int minutes;
   final bool selected;
   final bool enabled;
+  final String? resultLabel;
   final CrudoColors colors;
   final VoidCallback onTap;
 
@@ -168,6 +172,15 @@ class _PresetTile extends StatelessWidget {
                           .withValues(alpha: dim.Opacities.muted),
                 ),
               ),
+              if (resultLabel != null)
+                Text(
+                  resultLabel!,
+                  style: CrudoText.labelMd.copyWith(
+                    color: selected && enabled
+                        ? colors.surfaceLowest
+                        : colors.onSurfaceMut,
+                  ),
+                ),
             ],
           ),
         ),

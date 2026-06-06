@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../domain/services/meal_lifecycle.dart';
 import '../../../../domain/services/meal_status.dart';
+import '../../../../domain/shared/enums.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
@@ -17,21 +18,22 @@ import 'snooze_sheet.dart';
 /// Opens the inline marking sheet for one scheduled meal of one day (the
 /// S06 stand-in for the S08 mealDetail route). [readOnly] renders the
 /// checklist without any mutating controls — used for past days.
-void showMealSheet(
+Future<void> showMealSheet(
   BuildContext context, {
   required DateTime date,
   required String mealId,
   bool readOnly = false,
 }) {
-  showCrudoSheet<void>(
+  return showCrudoSheet<void>(
     context,
     builder: (_) => MealSheet(date: date, mealId: mealId, readOnly: readOnly),
   );
 }
 
 /// Marking sheet: watches the day controller so the checklist and derived
-/// status re-render live as items toggle. Footer: "Ate it" (mark all) +
-/// Skip + Snooze (visible only while the snooze guard allows it).
+/// status re-render live as items toggle. Body: checklist + action tiles
+/// (Snooze, Swap stub). Footer: Skip + dynamic primary (Mark Done / Save
+/// Partial). Read-only mode hides all actions.
 class MealSheet extends ConsumerWidget {
   const MealSheet({
     required this.date,
@@ -65,8 +67,17 @@ class MealSheet extends ConsumerWidget {
     final ctrl = ref.read(dayControllerProvider(date).notifier);
     final tag = meal.meal.tags.isEmpty ? 'Meal' : meal.meal.tags.first.name;
 
+    final items = meal.meal.items;
+    final checkedCount = items.where((i) => i.checked).length;
+    final isPartial = checkedCount > 0 && checkedCount < items.length;
+
+    final snoozedLabel =
+        meal.snoozedUntil != null && status == MealStatus.upcoming
+        ? '${mealTimeLabel(meal.time)} → ${timeOfDayLabel(meal.snoozedUntil!.toLocal())}'
+        : mealTimeLabel(meal.time);
+
     return SheetScaffold(
-      label: '${mealTimeLabel(meal.time)} · $tag · ${status.name}',
+      label: '$snoozedLabel · $tag · ${status.name}',
       title: meal.meal.name,
       body: ListView(
         shrinkWrap: true,
@@ -88,46 +99,66 @@ class MealSheet extends ConsumerWidget {
                           : ctrl.checkItem(mealId, i),
                     ),
             ),
+          if (!readOnly) ...[
+            const SizedBox(height: Spacing.md),
+            Row(
+              children: [
+                Expanded(
+                  child: _ActionTile(
+                    key: const ValueKey('tile-snooze'),
+                    icon: Icons.snooze_outlined,
+                    title: 'Snooze',
+                    subtitle: '${snoozePresetMinutes.last}m delay, no further',
+                    enabled: canSnoozeMeal(day, mealId, now, today),
+                    colors: colors,
+                    onTap: () => showCrudoSheet<void>(
+                      context,
+                      builder: (_) => SnoozeSheet(date: date, mealId: mealId),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: Spacing.sm),
+                Expanded(
+                  child: _ActionTile(
+                    key: const ValueKey('tile-swap'),
+                    icon: Icons.swap_horiz,
+                    title: 'Swap meal',
+                    subtitle: 'Pick from library',
+                    colors: colors,
+                    // TODO(S08): meal-library picker — design stub until then.
+                    onTap: null,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
       cta: readOnly
           ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+          : Row(
               children: [
-                PrimaryCta(
-                  label: 'Ate it',
-                  onPressed: () =>
-                      _run(context, () => ctrl.markAllEaten(mealId), pop: true),
+                Expanded(
+                  child: SecondaryAction(
+                    label: 'Skip',
+                    enabled: canSkipMeal(day, mealId, today),
+                    onTap: () =>
+                        _run(context, () => ctrl.skipMeal(mealId), pop: true),
+                  ),
                 ),
-                const SizedBox(height: Spacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SecondaryAction(
-                        label: 'Skip',
-                        enabled: canSkipMeal(day, mealId, today),
-                        onTap: () => _run(
-                          context,
-                          () => ctrl.skipMeal(mealId),
-                          pop: true,
-                        ),
-                      ),
-                    ),
-                    if (canSnoozeMeal(day, mealId, now, today)) ...[
-                      const SizedBox(width: Spacing.sm),
-                      Expanded(
-                        child: SecondaryAction(
-                          label: 'Snooze',
-                          onTap: () => showCrudoSheet<void>(
+                const SizedBox(width: Spacing.sm),
+                Expanded(
+                  flex: 2,
+                  child: PrimaryCta(
+                    label: isPartial ? 'Save Partial' : 'Mark Done',
+                    onPressed: checkedCount == 0
+                        ? () => _run(
                             context,
-                            builder: (_) =>
-                                SnoozeSheet(date: date, mealId: mealId),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+                            () => ctrl.markAllEaten(mealId),
+                            pop: true,
+                          )
+                        : () => Navigator.of(context).pop(),
+                  ),
                 ),
               ],
             ),
@@ -235,4 +266,64 @@ class _CheckRingPainter extends CustomPainter {
   @override
   bool shouldRepaint(_CheckRingPainter oldDelegate) =>
       oldDelegate.color != color;
+}
+
+/// meal.jsx 91–106 action tile: icon + title + subtitle, muted when disabled.
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.colors,
+    this.enabled = true,
+    this.onTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final CrudoColors colors;
+  final bool enabled;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: enabled ? 1 : Opacities.disabled,
+      child: Semantics(
+        button: enabled && onTap != null,
+        label: title,
+        child: GestureDetector(
+          onTap: enabled ? onTap : null,
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            padding: const EdgeInsets.all(Spacing.md),
+            decoration: BoxDecoration(
+              color: colors.surfaceLow,
+              borderRadius: Radii.all(Radii.md),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, size: IconSizes.md, color: colors.primary),
+                const SizedBox(height: Spacing.xs),
+                Text(
+                  title,
+                  style: CrudoText.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: CrudoText.body.copyWith(color: colors.onSurfaceMut),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }

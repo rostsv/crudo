@@ -112,6 +112,21 @@ abstract class Day with _$Day {
     return _withMeal(meal.copyWith(meal: meal.meal.copyWith(items: items)));
   }
 
+  /// Undo for the one-tap complete: clears every item's stamp. Leaves
+  /// skippedAt / snoozedUntil untouched (marking ops never touch the stamps);
+  /// derivation falls back to them, so skipped → done → skipped round-trips.
+  Day unmarkAll(String mealId, DateTime today) {
+    _ensureUnlocked(today);
+    final meal = _mealById(mealId);
+    if (!meal.meal.anyChecked) {
+      throw StateError('cannot unmark $mealId: nothing is checked');
+    }
+    final items = [
+      for (final i in meal.meal.items) i.copyWith(checkedAt: null),
+    ];
+    return _withMeal(meal.copyWith(meal: meal.meal.copyWith(items: items)));
+  }
+
   /// Explicit skip. Re-skip overwrites the stamp. Skipping an eaten meal is
   /// meaningless — uncheck first (UI pre-checks with canSkipMeal).
   Day skipMeal(String mealId, DateTime now, DateTime today) {

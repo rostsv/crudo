@@ -79,4 +79,56 @@ void main() {
     await tester.tap(find.text('Protein Bowl'));
     check(taps).equals(1);
   });
+
+  testWidgets(
+    'snoozedTimeLabel: original time struck-through, new time shown',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          MealCard(
+            title: 'Protein Bowl',
+            timeLabel: '14:00',
+            snoozedTimeLabel: '14:15',
+            mealTypeLabel: 'Lunch',
+            macros: _macros,
+            status: MealStatus.upcoming,
+          ),
+        ),
+      );
+      // Both times appear in the plain text of the RichText.
+      final richTexts = tester.widgetList<RichText>(find.byType(RichText));
+      RichText? timeRich;
+      for (final r in richTexts) {
+        if (r.text.toPlainText().contains('14:00') &&
+            r.text.toPlainText().contains('14:15')) {
+          timeRich = r;
+          break;
+        }
+      }
+      check(timeRich).isNotNull();
+      // The rich text contains both '14:00' and '14:15' in its flat text.
+      final plain = timeRich!.text.toPlainText();
+      check(plain).contains('14:00');
+      check(plain).contains('14:15');
+      // Walk the span tree to find the '14:00' span and check its style.
+      TextSpan? found;
+      void walk(InlineSpan span) {
+        if (found != null) return;
+        if (span is TextSpan) {
+          if (span.text == '14:00') {
+            found = span;
+            return;
+          }
+          for (final child in span.children ?? const <InlineSpan>[]) {
+            walk(child);
+          }
+        }
+      }
+
+      walk(timeRich.text);
+      check(found).isNotNull();
+      check(found!.style).isNotNull();
+      check(found!.style!.decoration).equals(TextDecoration.lineThrough);
+    },
+  );
 }

@@ -8,9 +8,20 @@ class InMemoryDayRepository implements DayRepository {
   final _changes = StreamController<void>.broadcast();
 
   @override
-  Stream<Day?> watchByDate(DateTime date) async* {
-    yield _store[date];
-    yield* _changes.stream.map((_) => _store[date]);
+  Stream<Day?> watchByDate(DateTime date) {
+    late StreamController<Day?> controller;
+    late StreamSubscription<void> sub;
+    controller = StreamController<Day?>(
+      onListen: () {
+        controller.add(_store[date]);
+        sub = _changes.stream.listen((_) => controller.add(_store[date]));
+      },
+      onCancel: () {
+        sub.cancel();
+        controller.close();
+      },
+    );
+    return controller.stream;
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:checks/checks.dart';
+import 'package:crudo/config/app_config.dart';
 import 'package:crudo/config/di.dart';
 import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/shared/enums.dart';
@@ -20,7 +21,12 @@ void main() {
       ),
     ];
     final container = ProviderContainer(
-      overrides: [seedFoodsProvider.overrideWithValue(seed)],
+      overrides: [
+        // Use prod flavor so the demo seed stays empty — this test
+        // asserts a clean DI graph with just the food seed overridden.
+        appConfigProvider.overrideWithValue(AppConfig(flavor: Flavor.prod)),
+        seedFoodsProvider.overrideWithValue(seed),
+      ],
     );
     addTearDown(container.dispose);
 

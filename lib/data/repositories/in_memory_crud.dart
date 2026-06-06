@@ -16,9 +16,20 @@ class InMemoryCrud<T> {
 
   List<T> get _snapshot => List.unmodifiable(_store.values);
 
-  Stream<List<T>> watchAll() async* {
-    yield _snapshot;
-    yield* _changes.stream.map((_) => _snapshot);
+  Stream<List<T>> watchAll() {
+    late StreamController<List<T>> controller;
+    late StreamSubscription<void> sub;
+    controller = StreamController<List<T>>(
+      onListen: () {
+        controller.add(_snapshot);
+        sub = _changes.stream.listen((_) => controller.add(_snapshot));
+      },
+      onCancel: () {
+        sub.cancel();
+        controller.close();
+      },
+    );
+    return controller.stream;
   }
 
   Future<List<T>> getAll() async => _snapshot;

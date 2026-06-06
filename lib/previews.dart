@@ -13,6 +13,11 @@ import 'ui/core/widgets/meal_card.dart';
 import 'ui/core/widgets/macro_ring.dart';
 import 'ui/core/widgets/sheet.dart';
 import 'ui/core/widgets/toast.dart';
+import 'ui/features/today/views/day_strip.dart';
+import 'ui/features/today/views/intake_card.dart';
+import 'ui/features/today/views/nudge_card.dart';
+import 'ui/features/today/views/streak_chip.dart';
+import 'ui/features/today/views/formatting.dart';
 
 /// Widget preview showcase — renders every core widget in all relevant states.
 /// Run as a standalone app for visual review; not wired into production routing.
@@ -159,9 +164,64 @@ class _PreviewHome extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Spacing.lg),
+
+            const Text('DayStrip', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            DayStrip(
+              dates: weekOf(DateTime.utc(2026, 6, 4)),
+              selected: DateTime.utc(2026, 6, 4),
+              today: DateTime.utc(2026, 6, 4),
+              onSelect: (_) {},
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('IntakeCard', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            const IntakeCard(
+              consumed: Macros(protein: 82, carbs: 140, fats: 38, kcal: 1240),
+              planned: Macros(protein: 140, carbs: 220, fats: 70, kcal: 2080),
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('StreakChip', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            const StreakChip(count: 7, onTap: _noop),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('NudgeCard', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            const NudgeCard(
+              title: 'Finish strong',
+              body: 'Two meals left — you\'re on pace for today\'s goal.',
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('MealCard — snoozed', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            MealCard(
+              title: 'Protein Bowl',
+              timeLabel: '14:00',
+              snoozedTimeLabel: '14:15',
+              mealTypeLabel: 'Lunch',
+              macros: const Macros(protein: 38, carbs: 52, fats: 16, kcal: 504),
+              ingredientNames: const [
+                'Chicken breast',
+                'Brown rice',
+                'Avocado',
+              ],
+              status: MealStatus.upcoming,
+              onTap: _noop,
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            // MealSheet / SnoozeSheet are provider-driven (they watch
+            // dayControllerProvider) — previewed in-app via the dev flavor,
+            // not from this static gallery.
           ],
         ),
       ),
     );
   }
 }
+
+void _noop() {}

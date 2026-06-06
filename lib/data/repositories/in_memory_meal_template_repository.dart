@@ -5,5 +5,6 @@ import 'in_memory_crud.dart';
 
 class InMemoryMealTemplateRepository extends InMemoryCrud<MealTemplate>
     implements MealTemplateRepository {
-  InMemoryMealTemplateRepository() : super((t) => t.id);
+  InMemoryMealTemplateRepository({Iterable<MealTemplate> seed = const []})
+    : super((t) => t.id, seed);
 }

@@ -29,3 +29,12 @@ abstract final class Durations {
   static const fast = Duration(milliseconds: 150);
   static const base = Duration(milliseconds: 200);
 }
+
+/// Alpha levels for derived colors — never inline a raw alpha in a widget.
+abstract final class Opacities {
+  /// Secondary/supporting text rendered over tonal or colored fills.
+  static const double muted = 0.7;
+
+  /// Disabled interactive elements (secondary actions, preset tiles).
+  static const double disabled = 0.4;
+}

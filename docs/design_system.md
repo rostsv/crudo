@@ -43,6 +43,7 @@ The UI is built as stacked layers — like sheets of fine paper. **No borders.**
 | `on-primary` | `#ffffff` | Text on primary buttons |
 | `gold` | `#e9b949` | **Partial** meal state, **Carbs** macro, streak flame, upgrade crown |
 | `gold-soft` | `#f4dfa6` | Gold tint for chips / soft backgrounds |
+| `bronze` | `#9A7E4E` | **Fats** macro bar (warm counterpart to gold for the 3rd macro) |
 | `error` | `#ba1a1a` | Error text/icon — container stays neutral, only text/icon turns red |
 | `error-soft` | `#ffdad6` | Error soft background |
 | `success` | `#196661` | Reuses primary teal |
@@ -84,6 +85,7 @@ Green (adherent, ≥ threshold) = `success` teal · Yellow (partial day, streak 
 | Body lg | 16 / 26 | 500 | Larger body |
 | Label | 10 / `+1.5px` tracking, uppercase | 700 | Metadata: STEP 1 OF 4, MACROS, CALORIES |
 | Label md | 12 / `+1.2px` tracking, uppercase | 700 | — |
+| Stat | 56 / 56 / `-2px` | 700 | Hero metric (app.css `.streak-num`): Today intake kcal, streak count |
 
 Rules: headlines dominate, left-aligned, large, tight leading. Labels are always all-caps with tracked spacing. Body uses muted color, never headline weight. Italic is reserved for emotional quote blocks (max one per screen). No underlines except links. Use `tnum` for numeric figures.
 
@@ -129,11 +131,18 @@ Component-intrinsic dimensions are **named constants in the widget**, must sit o
 | Meal status circle | 36 |
 | Meal time-bar | 4 × 44 |
 | Macro ring (default) | 72 |
+| Day pill | 44 × 60 |
+| Macro bar (height) | 4 |
+| Nudge icon circle | 40 |
 | Sheet grabber | 40 × 4 |
 | Toggle | 48 × 28 |
 | Check circle | 28 |
 | Avatar | 96 |
 | Primary CTA min-height | 56 |
+
+### Opacities
+
+Alpha levels for derived colors — never a raw alpha inline. `muted 0.7` (secondary text over tonal/colored fills) · `disabled 0.4` (disabled interactive elements). Dart: `Opacities.*`.
 
 ### Strokes — the only off-grid values
 

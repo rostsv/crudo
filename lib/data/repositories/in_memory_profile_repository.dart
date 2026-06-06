@@ -10,9 +10,20 @@ class InMemoryProfileRepository implements ProfileRepository {
   final _changes = StreamController<UserProfile>.broadcast();
 
   @override
-  Stream<UserProfile> watch() async* {
-    yield _profile;
-    yield* _changes.stream;
+  Stream<UserProfile> watch() {
+    late StreamController<UserProfile> controller;
+    late StreamSubscription<UserProfile> sub;
+    controller = StreamController<UserProfile>(
+      onListen: () {
+        controller.add(_profile);
+        sub = _changes.stream.listen(controller.add);
+      },
+      onCancel: () {
+        sub.cancel();
+        controller.close();
+      },
+    );
+    return controller.stream;
   }
 
   @override

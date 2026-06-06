@@ -5,5 +5,6 @@ import 'in_memory_crud.dart';
 
 class InMemoryPlanTemplateRepository extends InMemoryCrud<PlanTemplate>
     implements PlanTemplateRepository {
-  InMemoryPlanTemplateRepository() : super((p) => p.id);
+  InMemoryPlanTemplateRepository({Iterable<PlanTemplate> seed = const []})
+    : super((p) => p.id, seed);
 }

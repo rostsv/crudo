@@ -8,9 +8,20 @@ class InMemoryStreakRepository implements StreakRepository {
   final _changes = StreamController<Streak>.broadcast();
 
   @override
-  Stream<Streak> watch() async* {
-    yield _streak;
-    yield* _changes.stream;
+  Stream<Streak> watch() {
+    late StreamController<Streak> controller;
+    late StreamSubscription<Streak> sub;
+    controller = StreamController<Streak>(
+      onListen: () {
+        controller.add(_streak);
+        sub = _changes.stream.listen(controller.add);
+      },
+      onCancel: () {
+        sub.cancel();
+        controller.close();
+      },
+    );
+    return controller.stream;
   }
 
   @override

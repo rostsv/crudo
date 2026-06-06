@@ -20,12 +20,17 @@ class MealCard extends StatelessWidget {
     required this.macros,
     required this.status,
     this.ingredientNames = const <String>[],
+    this.snoozedTimeLabel,
     this.onTap,
     super.key,
   });
 
   final String title;
   final String timeLabel;
+
+  /// When the meal is snoozed: the new local time. Renders [timeLabel]
+  /// struck-through with this to its right.
+  final String? snoozedTimeLabel;
 
   /// Meal-type tag shown next to the time, e.g. "Breakfast".
   final String mealTypeLabel;
@@ -83,10 +88,24 @@ class MealCard extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          '$timeLabel · $mealTypeLabel',
-                          style: CrudoText.label.copyWith(
-                            color: colors.onSurfaceMut,
+                        child: Text.rich(
+                          TextSpan(
+                            style: CrudoText.label.copyWith(
+                              color: colors.onSurfaceMut,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: timeLabel,
+                                style: snoozedTimeLabel == null
+                                    ? null
+                                    : const TextStyle(
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                              ),
+                              if (snoozedTimeLabel != null)
+                                TextSpan(text: '  $snoozedTimeLabel'),
+                              TextSpan(text: ' · $mealTypeLabel'),
+                            ],
                           ),
                         ),
                       ),

@@ -17,6 +17,7 @@ abstract final class CrudoPalette {
   static const onSurfaceMut = Color(0xFF8A938F);
   static const gold = Color(0xFFE9B949);
   static const goldSoft = Color(0xFFF4DFA6);
+  static const bronze = Color(0xFF9A7E4E);
   static const goldDeep = Color(0xFF8A6B1A);
   static const error = Color(0xFFBA1A1A);
   static const errorSoft = Color(0xFFFFDAD6);
@@ -43,6 +44,7 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     required this.onSurfaceMut,
     required this.gold,
     required this.goldSoft,
+    required this.bronze,
     required this.goldDeep,
     required this.error,
     required this.errorSoft,
@@ -59,7 +61,14 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
   final Color primary, primarySoft, primaryContainer;
   final Color secondaryContainer, onSecondaryContainer;
   final Color onSurface, onSurfaceVar, onSurfaceMut;
-  final Color gold, goldSoft, goldDeep, error, errorSoft, success, outline;
+  final Color gold,
+      goldSoft,
+      bronze,
+      goldDeep,
+      error,
+      errorSoft,
+      success,
+      outline;
 
   static const light = CrudoColors(
     surface: CrudoPalette.surface,
@@ -78,6 +87,7 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     onSurfaceMut: CrudoPalette.onSurfaceMut,
     gold: CrudoPalette.gold,
     goldSoft: CrudoPalette.goldSoft,
+    bronze: CrudoPalette.bronze,
     goldDeep: CrudoPalette.goldDeep,
     error: CrudoPalette.error,
     errorSoft: CrudoPalette.errorSoft,
@@ -103,6 +113,7 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     Color? onSurfaceMut,
     Color? gold,
     Color? goldSoft,
+    Color? bronze,
     Color? goldDeep,
     Color? error,
     Color? errorSoft,
@@ -126,6 +137,7 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
       onSurfaceMut: onSurfaceMut ?? this.onSurfaceMut,
       gold: gold ?? this.gold,
       goldSoft: goldSoft ?? this.goldSoft,
+      bronze: bronze ?? this.bronze,
       goldDeep: goldDeep ?? this.goldDeep,
       error: error ?? this.error,
       errorSoft: errorSoft ?? this.errorSoft,
@@ -166,6 +178,7 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
       onSurfaceMut: Color.lerp(onSurfaceMut, other.onSurfaceMut, t)!,
       gold: Color.lerp(gold, other.gold, t)!,
       goldSoft: Color.lerp(goldSoft, other.goldSoft, t)!,
+      bronze: Color.lerp(bronze, other.bronze, t)!,
       goldDeep: Color.lerp(goldDeep, other.goldDeep, t)!,
       error: Color.lerp(error, other.error, t)!,
       errorSoft: Color.lerp(errorSoft, other.errorSoft, t)!,

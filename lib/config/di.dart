@@ -1,9 +1,11 @@
+import 'package:crudo/config/app_config.dart';
 import 'package:crudo/data/repositories/in_memory_day_repository.dart';
 import 'package:crudo/data/repositories/in_memory_food_repository.dart';
 import 'package:crudo/data/repositories/in_memory_meal_template_repository.dart';
 import 'package:crudo/data/repositories/in_memory_plan_template_repository.dart';
 import 'package:crudo/data/repositories/in_memory_profile_repository.dart';
 import 'package:crudo/data/repositories/in_memory_streak_repository.dart';
+import 'package:crudo/data/services/demo_seed.dart';
 import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/repositories/day_repository.dart';
 import 'package:crudo/domain/repositories/food_repository.dart';
@@ -26,11 +28,17 @@ final foodRepositoryProvider = Provider<FoodRepository>(
 );
 
 final mealTemplateRepositoryProvider = Provider<MealTemplateRepository>(
-  (ref) => InMemoryMealTemplateRepository(),
+  (ref) => InMemoryMealTemplateRepository(
+    seed: ref.watch(appConfigProvider).isDev ? demoMealTemplates : const [],
+  ),
 );
 
 final planTemplateRepositoryProvider = Provider<PlanTemplateRepository>(
-  (ref) => InMemoryPlanTemplateRepository(),
+  (ref) => InMemoryPlanTemplateRepository(
+    seed: ref.watch(appConfigProvider).isDev
+        ? const [demoPlanTemplate]
+        : const [],
+  ),
 );
 
 final dayRepositoryProvider = Provider<DayRepository>(

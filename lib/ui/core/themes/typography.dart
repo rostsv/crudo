@@ -20,6 +20,16 @@ abstract final class CrudoText {
     fontWeight: FontWeight.w600,
     color: CrudoPalette.onSurface,
   );
+
+  /// Hero statistic figure (app.css .streak-num — intake kcal, streak count).
+  static const stat = TextStyle(
+    fontFamily: _f,
+    fontSize: 56,
+    height: 1.0,
+    letterSpacing: -2,
+    fontWeight: FontWeight.w700,
+    color: CrudoPalette.onSurface,
+  );
   static const headline = TextStyle(
     fontFamily: _f,
     fontSize: 24,

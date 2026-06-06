@@ -27,6 +27,11 @@
       "prompt": "{file:./.opencode/roles/implement.md}"
     },
 
+    "implement-free": {
+      "model": "opencode/minimax-m3-free",
+      "prompt": "{file:./.opencode/roles/implement.md}"
+    },
+
     "build": {
       "model": "opencode/deepseek-v4-flash-free",
       "mode": "all",

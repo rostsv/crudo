@@ -38,6 +38,7 @@
       "Bash(sort:*)",
       "Bash(uniq:*)",
       "Bash(cut:*)",
+      "Bash(sed:*)",
       "Bash(jq:*)",
       "Bash(mkdir:*)",
       "Bash(touch:*)",

@@ -1,6 +1,7 @@
 import 'package:checks/checks.dart';
 import 'package:crudo/domain/shared/enums.dart';
 import 'package:crudo/domain/shared/macros.dart';
+import 'package:crudo/ui/core/themes/colors.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
 import 'package:crudo/ui/core/widgets/meal_card.dart';
 import 'package:flutter/material.dart';
@@ -121,6 +122,43 @@ void main() {
       find.byKey(const ValueKey('meal-status-done')),
     );
     check(done.label).equals('Undo Protein Bowl');
+  });
+
+  testWidgets('overdue: amber label + clock icon on amber-soft circle; '
+      'title not muted', (tester) async {
+    await tester.pumpWidget(_wrap(_card(status: MealStatus.overdue)));
+    expect(find.text('OVERDUE'), findsOneWidget);
+    final label = tester.widget<Text>(find.text('OVERDUE'));
+    check(label.style!.color).equals(CrudoColors.light.overdue);
+    final icon = tester.widget<Icon>(find.byIcon(Icons.schedule));
+    check(icon.color).equals(CrudoColors.light.overdue);
+    final title = tester.widget<Text>(find.text('Protein Bowl'));
+    check(title.style!.color).equals(CrudoColors.light.onSurface);
+  });
+
+  testWidgets('overdue keeps struck-through original + snoozed time', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        MealCard(
+          title: 'Protein Bowl',
+          timeLabel: '14:00',
+          snoozedTimeLabel: '14:15',
+          mealTypeLabel: 'Lunch',
+          macros: _macros,
+          status: MealStatus.overdue,
+        ),
+      ),
+    );
+    final rich = tester
+        .widgetList<RichText>(find.byType(RichText))
+        .where(
+          (r) =>
+              r.text.toPlainText().contains('14:00') &&
+              r.text.toPlainText().contains('14:15'),
+        );
+    check(rich).isNotEmpty();
   });
 
   testWidgets(

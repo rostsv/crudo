@@ -21,6 +21,10 @@ abstract final class CrudoPalette {
   static const goldDeep = Color(0xFF8A6B1A);
   static const error = Color(0xFFBA1A1A);
   static const errorSoft = Color(0xFFFFDAD6);
+  static const overdue = Color(0xFFD97706); // warm amber — urgent, not terminal
+  static const overdueSoft = Color(
+    0xFFFEF3C7,
+  ); // amber tint — overdue circle bg
   static const success = Color(0xFF196661);
   static const outline = Color(0x4DBEC9C7);
 }
@@ -48,6 +52,8 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     required this.goldDeep,
     required this.error,
     required this.errorSoft,
+    required this.overdue,
+    required this.overdueSoft,
     required this.success,
     required this.outline,
   });
@@ -67,6 +73,8 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
       goldDeep,
       error,
       errorSoft,
+      overdue,
+      overdueSoft,
       success,
       outline;
 
@@ -91,6 +99,8 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     goldDeep: CrudoPalette.goldDeep,
     error: CrudoPalette.error,
     errorSoft: CrudoPalette.errorSoft,
+    overdue: CrudoPalette.overdue,
+    overdueSoft: CrudoPalette.overdueSoft,
     success: CrudoPalette.success,
     outline: CrudoPalette.outline,
   );
@@ -117,6 +127,8 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     Color? goldDeep,
     Color? error,
     Color? errorSoft,
+    Color? overdue,
+    Color? overdueSoft,
     Color? success,
     Color? outline,
   }) {
@@ -141,6 +153,8 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
       goldDeep: goldDeep ?? this.goldDeep,
       error: error ?? this.error,
       errorSoft: errorSoft ?? this.errorSoft,
+      overdue: overdue ?? this.overdue,
+      overdueSoft: overdueSoft ?? this.overdueSoft,
       success: success ?? this.success,
       outline: outline ?? this.outline,
     );
@@ -188,6 +202,8 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
       goldDeep: Color.lerp(goldDeep, other.goldDeep, t)!,
       error: Color.lerp(error, other.error, t)!,
       errorSoft: Color.lerp(errorSoft, other.errorSoft, t)!,
+      overdue: Color.lerp(overdue, other.overdue, t)!,
+      overdueSoft: Color.lerp(overdueSoft, other.overdueSoft, t)!,
       success: Color.lerp(success, other.success, t)!,
       outline: Color.lerp(outline, other.outline, t)!,
     );

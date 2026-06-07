@@ -310,4 +310,59 @@ void main() {
       expect(dayFutureAfter.meals.first.meal.anyChecked, isFalse);
     }
   });
+
+  testWidgets(
+    'overdue meal: OVERDUE label + snoozed time persist on the card',
+    (tester) async {
+      now = DateTime(2026, 6, 4, 15, 55);
+      final c = await pumpToday(tester);
+      await c
+          .read(dayControllerProvider(today).notifier)
+          .snooze('sm-2', DateTime(2026, 6, 4, 16, 15));
+      // Cross into the grace window: 16:15 + 15m → 16:30 (dinner 19:00 no cap).
+      now = DateTime(2026, 6, 4, 16, 20);
+      await tester.pumpWidget(app(c));
+      await tester.pumpAndSettle();
+      expect(find.text('OVERDUE'), findsOneWidget);
+      // The card's time row is a Text.rich — match the span, not a Text widget.
+      expect(
+        find.textContaining('16:15', findRichText: true),
+        findsOneWidget,
+      ); // snoozed label persists
+    },
+  );
+
+  testWidgets('nudge counts an overdue meal as remaining', (tester) async {
+    now = DateTime(2026, 6, 4, 15, 55);
+    final c = await pumpToday(tester);
+    await c
+        .read(dayControllerProvider(today).notifier)
+        .snooze('sm-2', DateTime(2026, 6, 4, 16, 15));
+    now = DateTime(2026, 6, 4, 16, 20);
+    await tester.pumpWidget(app(c));
+    await tester.pumpAndSettle();
+    // snack overdue + dinner upcoming = 2 (breakfast/lunch auto-skipped).
+    expect(
+      find.text('2 meals remain. A done day keeps the streak.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('circle tap on an overdue meal completes it', (tester) async {
+    now = DateTime(2026, 6, 4, 15, 55);
+    final c = await pumpToday(tester);
+    await c
+        .read(dayControllerProvider(today).notifier)
+        .snooze('sm-2', DateTime(2026, 6, 4, 16, 15));
+    now = DateTime(2026, 6, 4, 16, 20);
+    await tester.pumpWidget(app(c));
+    await tester.pumpAndSettle();
+    await tester.tap(
+      find.byKey(const ValueKey('meal-status-overdue')),
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    final day = await c.read(dayControllerProvider(today).future);
+    expect(day.meals.firstWhere((m) => m.id == 'sm-2').meal.allChecked, isTrue);
+  });
 }

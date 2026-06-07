@@ -250,4 +250,161 @@ void main() {
       check(canUnmarkMeal(dayChecked, 'nope', today)).isFalse();
     });
   });
+
+  group('computeGraceEnd / mealStatus', () {
+    Day d() => buildDayFromPlan(
+      _plan(),
+      thursday,
+      _SeqIds().newId,
+      [_breakfastTpl, _lunchTpl],
+      [_egg, _rice],
+    );
+
+    test('standard: snoozedUntil + 15min within bound', () {
+      final until = DateTime(2026, 6, 4, 10).toUtc();
+      check(
+        computeGraceEnd(d(), 'id-0', until),
+      ).equals(DateTime(2026, 6, 4, 10, 15).toUtc());
+    });
+    test('capped at next meal time', () {
+      final until = DateTime(2026, 6, 4, 12, 50).toUtc();
+      check(
+        computeGraceEnd(d(), 'id-0', until),
+      ).equals(DateTime(2026, 6, 4, 13).toUtc());
+    });
+    test('capped at end-of-day midnight (last meal)', () {
+      final until = DateTime(2026, 6, 4, 23, 55).toUtc();
+      check(
+        computeGraceEnd(d(), 'id-1', until),
+      ).equals(DateTime(2026, 6, 5).toUtc());
+    });
+    test('snoozedUntil at the bound → grace = 0', () {
+      final until = DateTime(2026, 6, 4, 13).toUtc();
+      check(computeGraceEnd(d(), 'id-0', until)).equals(until);
+    });
+    test('mealStatus: pending → upcoming, in grace → overdue, after → skipped '
+        '(acceptance #1)', () {
+      final snoozed = d().snoozeMeal(
+        'id-0',
+        DateTime(2026, 6, 4, 12, 30),
+        DateTime(2026, 6, 4, 12),
+        thursday,
+      );
+      check(
+        mealStatus(snoozed, 'id-0', DateTime(2026, 6, 4, 12, 20)),
+      ).equals(MealStatus.upcoming);
+      check(
+        mealStatus(snoozed, 'id-0', DateTime(2026, 6, 4, 12, 31)),
+      ).equals(MealStatus.overdue);
+      check(
+        mealStatus(snoozed, 'id-0', DateTime(2026, 6, 4, 12, 46)),
+      ).equals(MealStatus.skipped);
+    });
+    test(
+      'snoozed to the bound skips immediately on expiry (acceptance #2)',
+      () {
+        final snoozed = d().snoozeMeal(
+          'id-0',
+          DateTime(2026, 6, 4, 13),
+          DateTime(2026, 6, 4, 12),
+          thursday,
+        );
+        check(
+          mealStatus(snoozed, 'id-0', DateTime(2026, 6, 4, 13, 1)),
+        ).equals(MealStatus.skipped);
+      },
+    );
+    test('no snooze: mealStatus matches the sentinel path', () {
+      check(
+        mealStatus(d(), 'id-0', DateTime(2026, 6, 4, 7)),
+      ).equals(MealStatus.upcoming);
+      check(
+        mealStatus(d(), 'id-0', DateTime(2026, 6, 4, 9)),
+      ).equals(MealStatus.skipped);
+    });
+    test('unknown meal throws', () {
+      check(
+        () => mealStatus(d(), 'nope', DateTime(2026, 6, 4, 9)),
+      ).throws<StateError>();
+    });
+  });
+
+  group('canSnoozeMeal S05.1 guards', () {
+    Day d() => buildDayFromPlan(
+      _plan(),
+      thursday,
+      _SeqIds().newId,
+      [_breakfastTpl, _lunchTpl],
+      [_egg, _rice],
+    );
+
+    final noon = DateTime(2026, 6, 4, 12);
+
+    test('false when skippedAt is set', () {
+      final skipped = d().skipMeal('id-0', noon, thursday);
+      check(canSnoozeMeal(skipped, 'id-0', noon, thursday)).isFalse();
+    });
+    test('true for an overdue meal while the bound permits', () {
+      // snoozed 12:00 → 12:30; at 12:40 the snooze is expired (grace ends
+      // 12:45) and lunch (13:00) is still ahead → re-snooze allowed.
+      final snoozed = d().snoozeMeal(
+        'id-0',
+        DateTime(2026, 6, 4, 12, 30),
+        noon,
+        thursday,
+      );
+      final at1240 = DateTime(2026, 6, 4, 12, 40);
+      check(mealStatus(snoozed, 'id-0', at1240)).equals(MealStatus.overdue);
+      check(canSnoozeMeal(snoozed, 'id-0', at1240, thursday)).isTrue();
+    });
+  });
+
+  group('snoozeIneligibilityReason', () {
+    Day d() => buildDayFromPlan(
+      _plan(),
+      thursday,
+      _SeqIds().newId,
+      [_breakfastTpl, _lunchTpl],
+      [_egg, _rice],
+    );
+
+    final noon = DateTime(2026, 6, 4, 12);
+
+    test('null when eligible', () {
+      check(snoozeIneligibilityReason(d(), 'id-0', noon, thursday)).isNull();
+    });
+    test('Day is locked for a past day', () {
+      check(
+        snoozeIneligibilityReason(d(), 'id-0', noon, DateTime.utc(2026, 6, 5)),
+      ).equals('Day is locked');
+    });
+    test('Meal not found', () {
+      check(
+        snoozeIneligibilityReason(d(), 'nope', noon, thursday),
+      ).equals('Meal not found');
+    });
+    test('Meal is done for allChecked', () {
+      final done = d().markAllEaten('id-0', noon, thursday);
+      check(
+        snoozeIneligibilityReason(done, 'id-0', noon, thursday),
+      ).equals('Meal is done');
+    });
+    test('Meal is skipped for skippedAt', () {
+      final skipped = d().skipMeal('id-0', noon, thursday);
+      check(
+        snoozeIneligibilityReason(skipped, 'id-0', noon, thursday),
+      ).equals('Meal is skipped');
+    });
+    test('No room before your next meal when bound ≤ now', () {
+      // breakfast's bound is lunch 13:00; at 13:05 it's behind us.
+      check(
+        snoozeIneligibilityReason(
+          d(),
+          'id-0',
+          DateTime(2026, 6, 4, 13, 5),
+          thursday,
+        ),
+      ).equals('No room before your next meal');
+    });
+  });
 }

@@ -1,5 +1,5 @@
-/// Per-meal status — always DERIVED from checked flags + time (S05); never stored.
-enum MealStatus { done, partial, upcoming, skipped }
+/// Per-meal status — always DERIVED from checked flags + time (S05/S05.1); never stored.
+enum MealStatus { done, partial, upcoming, overdue, skipped }
 
 /// Meal category tags; a meal may carry several.
 enum MealTag { breakfast, lunch, dinner, snack, preWorkout, postWorkout }

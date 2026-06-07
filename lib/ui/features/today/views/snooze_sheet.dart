@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../domain/day/scheduled_meal.dart';
 import '../../../../domain/services/meal_lifecycle.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart' as dim;
@@ -45,6 +46,26 @@ class _SnoozeSheetState extends ConsumerState<SnoozeSheet> {
     DateTime untilFor(int m) => base.add(Duration(minutes: m));
     bool enabled(int m) => !untilFor(m).toUtc().isAfter(bound);
 
+    // which cap is in play? maxSnoozeUntilFor returns the next meal's
+    // instant when one exists, else midnight — so the reason follows from
+    // whether a strictly-later meal exists (same comparison rule: strictly
+    // greater by time, earliest such).
+    final mealNow = day.meals.firstWhere((m) => m.id == widget.mealId);
+    ScheduledMeal? next;
+    for (final m in day.meals) {
+      if (m.time.compareTo(mealNow.time) > 0 &&
+          (next == null || m.time.compareTo(next.time) < 0)) {
+        next = m;
+      }
+    }
+    final nextTag = next == null
+        ? null
+        : next.meal.tags.isEmpty
+        ? 'next meal'
+        : next.meal.tags.first.name[0].toUpperCase() +
+              next.meal.tags.first.name.substring(1);
+    final disabledReason = nextTag == null ? 'Past midnight' : 'Past $nextTag';
+
     // Default: the preferred preset, else the largest still-enabled one —
     // never open on a dead selection + disabled CTA.
     final selected =
@@ -79,7 +100,7 @@ class _SnoozeSheetState extends ConsumerState<SnoozeSheet> {
                     enabled: enabled(m),
                     resultLabel: enabled(m)
                         ? timeOfDayLabel(untilFor(m).toLocal())
-                        : null,
+                        : disabledReason,
                     colors: colors,
                     onTap: () => setState(() => _selected = m),
                   ),
@@ -89,6 +110,14 @@ class _SnoozeSheetState extends ConsumerState<SnoozeSheet> {
               ],
             ],
           ),
+          if (!enabled(snoozePresetMinutes.first)) ...[
+            const SizedBox(height: dim.Spacing.md),
+            Text(
+              'No room to snooze — your next meal is too soon',
+              key: const ValueKey('snooze-empty'),
+              style: CrudoText.body.copyWith(color: colors.onSurfaceMut),
+            ),
+          ],
         ],
       ),
       cta: Row(

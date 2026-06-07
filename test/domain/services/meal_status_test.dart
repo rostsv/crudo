@@ -55,6 +55,15 @@ void main() {
   DateTime nowAt(int hour, [int minute = 0]) =>
       DateTime(2026, 6, 4, hour, minute);
 
+  // Sentinel helper — `now` as graceEnd is the safe default for callers that
+  // only check `== upcoming`. Overdue tests pass an explicit graceEnd.
+  MealStatus derive(
+    ScheduledMeal m,
+    DateTime date,
+    DateTime now, {
+    DateTime? graceEnd,
+  }) => deriveMealStatus(m, date, now, graceEnd ?? now);
+
   group('checked wins (rule 1) on any day', () {
     for (final (label, date) in [
       ('past', DateTime.utc(2026, 6, 3)),
@@ -63,12 +72,12 @@ void main() {
     ]) {
       test('partial on $label day', () {
         check(
-          deriveMealStatus(_meal(checkedOf2: 1), date, nowAt(9)),
+          derive(_meal(checkedOf2: 1), date, nowAt(9)),
         ).equals(MealStatus.partial);
       });
       test('done on $label day', () {
         check(
-          deriveMealStatus(_meal(checkedOf2: 2), date, nowAt(9)),
+          derive(_meal(checkedOf2: 2), date, nowAt(9)),
         ).equals(MealStatus.done);
       });
     }
@@ -78,19 +87,19 @@ void main() {
         skippedAt: DateTime.utc(2026, 6, 4, 9),
         snoozedUntil: DateTime.utc(2026, 6, 4, 11),
       );
-      check(deriveMealStatus(m, dayDate, nowAt(23))).equals(MealStatus.done);
+      check(derive(m, dayDate, nowAt(23))).equals(MealStatus.done);
     });
   });
 
   group('non-today, unchecked', () {
     test('past day freezes to skipped (rule 2)', () {
       check(
-        deriveMealStatus(_meal(), DateTime.utc(2026, 6, 3), nowAt(9)),
+        derive(_meal(), DateTime.utc(2026, 6, 3), nowAt(9)),
       ).equals(MealStatus.skipped);
     });
     test('future day is upcoming (rule 3) even past meal time', () {
       check(
-        deriveMealStatus(_meal(), DateTime.utc(2026, 6, 5), nowAt(23)),
+        derive(_meal(), DateTime.utc(2026, 6, 5), nowAt(23)),
       ).equals(MealStatus.upcoming);
     });
   });
@@ -98,44 +107,89 @@ void main() {
   group('today chain', () {
     test('explicit skip shows immediately, pre-window (rule 4)', () {
       final m = _meal(skippedAt: DateTime.utc(2026, 6, 4, 9));
-      check(
-        deriveMealStatus(m, dayDate, nowAt(9, 30)),
-      ).equals(MealStatus.skipped);
+      check(derive(m, dayDate, nowAt(9, 30))).equals(MealStatus.skipped);
     });
     test('skip beats pending snooze (rule 4 over 5)', () {
       final m = _meal(
         skippedAt: DateTime.utc(2026, 6, 4, 9),
         snoozedUntil: nowAt(18).toUtc(),
       );
-      check(deriveMealStatus(m, dayDate, nowAt(14))).equals(MealStatus.skipped);
+      check(derive(m, dayDate, nowAt(14))).equals(MealStatus.skipped);
     });
     test('pending snooze holds upcoming past meal time (rule 5 over 6)', () {
       final m = _meal(snoozedUntil: nowAt(14, 30).toUtc());
-      check(
-        deriveMealStatus(m, dayDate, nowAt(14)),
-      ).equals(MealStatus.upcoming);
+      check(derive(m, dayDate, nowAt(14))).equals(MealStatus.upcoming);
     });
-    test('elapsed snooze falls through to auto-skip (rule 6)', () {
-      final m = _meal(snoozedUntil: nowAt(13, 30).toUtc());
-      check(deriveMealStatus(m, dayDate, nowAt(14))).equals(MealStatus.skipped);
-    });
-    test('auto-skip flips at meal time exactly, no grace (rule 6)', () {
+    test('auto-skip flips at meal time exactly, no grace (rule 7)', () {
       check(
-        deriveMealStatus(_meal(), dayDate, nowAt(12, 59)),
+        derive(_meal(), dayDate, nowAt(12, 59)),
       ).equals(MealStatus.upcoming);
-      check(
-        deriveMealStatus(_meal(), dayDate, nowAt(13)),
-      ).equals(MealStatus.skipped);
+      check(derive(_meal(), dayDate, nowAt(13))).equals(MealStatus.skipped);
     });
     test('MealTime(0) auto-skips from day start (edge 18)', () {
       check(
-        deriveMealStatus(_meal(timeMinutes: 0), dayDate, nowAt(0)),
+        derive(_meal(timeMinutes: 0), dayDate, nowAt(0)),
       ).equals(MealStatus.skipped);
     });
-    test('upcoming before meal time (rule 7)', () {
+    test('upcoming before meal time (rule 8)', () {
+      check(derive(_meal(), dayDate, nowAt(8))).equals(MealStatus.upcoming);
+    });
+  });
+
+  group('overdue (rule 6)', () {
+    test('elapsed snooze within grace → overdue', () {
+      final m = _meal(snoozedUntil: nowAt(13, 30).toUtc());
       check(
-        deriveMealStatus(_meal(), dayDate, nowAt(8)),
+        derive(m, dayDate, nowAt(13, 40), graceEnd: nowAt(13, 45).toUtc()),
+      ).equals(MealStatus.overdue);
+    });
+    test('elapsed snooze past grace → skipped (rule 7)', () {
+      final m = _meal(snoozedUntil: nowAt(13, 30).toUtc());
+      check(
+        derive(m, dayDate, nowAt(14), graceEnd: nowAt(13, 45).toUtc()),
+      ).equals(MealStatus.skipped);
+    });
+    test('grace = 0 (graceEnd == snoozedUntil) → skipped immediately', () {
+      final m = _meal(snoozedUntil: nowAt(13, 30).toUtc());
+      check(
+        derive(m, dayDate, nowAt(13, 31), graceEnd: nowAt(13, 30).toUtc()),
+      ).equals(MealStatus.skipped);
+    });
+    test('checked wins over overdue (rule 1)', () {
+      final m = _meal(checkedOf2: 2, snoozedUntil: nowAt(13, 30).toUtc());
+      check(
+        derive(m, dayDate, nowAt(13, 40), graceEnd: nowAt(13, 45).toUtc()),
+      ).equals(MealStatus.done);
+    });
+    test('explicit skip beats overdue (rule 4 over 6)', () {
+      final m = _meal(
+        skippedAt: DateTime.utc(2026, 6, 4, 9),
+        snoozedUntil: nowAt(13, 30).toUtc(),
+      );
+      check(
+        derive(m, dayDate, nowAt(13, 40), graceEnd: nowAt(13, 45).toUtc()),
+      ).equals(MealStatus.skipped);
+    });
+    test('pre-window snooze expired, grace over, meal time not reached → '
+        'upcoming (rule 8)', () {
+      // Meal at 14:00 snoozed (domain allows until < scheduled) to 12:30;
+      // grace over at 12:45; 12:50 < 14:00 → rule 7 dead → upcoming.
+      final m = _meal(
+        timeMinutes: 14 * 60,
+        snoozedUntil: nowAt(12, 30).toUtc(),
+      );
+      check(
+        derive(m, dayDate, nowAt(12, 50), graceEnd: nowAt(12, 45).toUtc()),
       ).equals(MealStatus.upcoming);
+    });
+    test('MealTime(0) snoozed: overdue within grace, skipped after', () {
+      final m = _meal(timeMinutes: 0, snoozedUntil: nowAt(0, 20).toUtc());
+      check(
+        derive(m, dayDate, nowAt(0, 25), graceEnd: nowAt(0, 35).toUtc()),
+      ).equals(MealStatus.overdue);
+      check(
+        derive(m, dayDate, nowAt(0, 40), graceEnd: nowAt(0, 35).toUtc()),
+      ).equals(MealStatus.skipped);
     });
   });
 

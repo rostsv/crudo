@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../domain/services/meal_lifecycle.dart';
-import '../../../../domain/services/meal_status.dart';
 import '../../../../domain/shared/enums.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
+import '../../../core/widgets/toast.dart';
 import '../view_models/day_controller.dart';
 import '../view_models/today_providers.dart';
 import 'formatting.dart';
@@ -63,7 +63,7 @@ class MealSheet extends ConsumerWidget {
 
     final now = ref.watch(clockProvider)();
     final today = ref.watch(todayProvider);
-    final status = deriveMealStatus(meal, day.date, now);
+    final status = mealStatus(day, mealId, now);
     final ctrl = ref.read(dayControllerProvider(date).notifier);
     final tag = meal.meal.tags.isEmpty ? 'Meal' : meal.meal.tags.first.name;
 
@@ -72,7 +72,8 @@ class MealSheet extends ConsumerWidget {
     final isPartial = checkedCount > 0 && checkedCount < items.length;
 
     final snoozedLabel =
-        meal.snoozedUntil != null && status == MealStatus.upcoming
+        meal.snoozedUntil != null &&
+            (status == MealStatus.upcoming || status == MealStatus.overdue)
         ? '${mealTimeLabel(meal.time)} → ${timeOfDayLabel(meal.snoozedUntil!.toLocal())}'
         : mealTimeLabel(meal.time);
 
@@ -115,6 +116,17 @@ class MealSheet extends ConsumerWidget {
                       context,
                       builder: (_) => SnoozeSheet(date: date, mealId: mealId),
                     ),
+                    onDisabledTap: () {
+                      final reason = snoozeIneligibilityReason(
+                        day,
+                        mealId,
+                        now,
+                        today,
+                      );
+                      if (reason != null) {
+                        showCrudoToast(context, reason, kind: ToastKind.warn);
+                      }
+                    },
                   ),
                 ),
                 const SizedBox(width: Spacing.sm),
@@ -277,6 +289,7 @@ class _ActionTile extends StatelessWidget {
     required this.colors,
     this.enabled = true,
     this.onTap,
+    this.onDisabledTap,
     super.key,
   });
 
@@ -287,6 +300,10 @@ class _ActionTile extends StatelessWidget {
   final bool enabled;
   final VoidCallback? onTap;
 
+  /// Fires when the tile is tapped while disabled (S05.1: ineligibility
+  /// toast). The tile still renders at Opacities.disabled — never hides.
+  final VoidCallback? onDisabledTap;
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
@@ -295,7 +312,7 @@ class _ActionTile extends StatelessWidget {
         button: enabled && onTap != null,
         label: title,
         child: GestureDetector(
-          onTap: enabled ? onTap : null,
+          onTap: enabled ? onTap : onDisabledTap,
           behavior: HitTestBehavior.opaque,
           child: Container(
             padding: const EdgeInsets.all(Spacing.md),

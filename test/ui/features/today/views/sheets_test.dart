@@ -196,6 +196,42 @@ void main() {
       // Sheet stays open, nothing changed.
       expect(find.text('Protein Oats Bowl'), findsOneWidget);
     });
+
+    testWidgets(
+      'disabled snooze tile tap on a done meal toasts "Meal is done"',
+      (tester) async {
+        await open(tester, (c) => mealSheetOpener(c));
+        final day0 = await container.read(dayControllerProvider(today).future);
+        await container
+            .read(dayControllerProvider(today).notifier)
+            .markAllEaten(day0.meals.first.id);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('tile-snooze')));
+        await tester.pump(); // toast entrance
+        expect(find.text('Meal is done'), findsOneWidget);
+        expect(
+          find.text('Snooze, then eat.'),
+          findsNothing,
+        ); // sheet didn't open
+        await tester.pump(const Duration(seconds: 5)); // let the toast expire
+      },
+    );
+
+    testWidgets(
+      'disabled snooze tile tap on a skipped meal toasts "Meal is skipped"',
+      (tester) async {
+        await open(tester, (c) => mealSheetOpener(c));
+        await tester.tap(find.text('Skip'));
+        await tester.pumpAndSettle();
+        // Skip pops the sheet — reopen on the now-skipped meal.
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('tile-snooze')));
+        await tester.pump();
+        expect(find.text('Meal is skipped'), findsOneWidget);
+        await tester.pump(const Duration(seconds: 5));
+      },
+    );
   });
 
   group('SnoozeSheet', () {
@@ -322,6 +358,44 @@ void main() {
       expect(find.text('16:15'), findsOneWidget);
       expect(find.text('16:20'), findsOneWidget);
       expect(find.text('16:30'), findsOneWidget);
+    });
+
+    testWidgets(
+      'bound 20 min away: 10/15/20 enabled (bound inclusive), 30 reasoned '
+      '"Past Dinner"',
+      (tester) async {
+        // 18:40 — snack base = now (16:00 passed); dinner bound 19:00.
+        // +20 = 19:00 == bound → enabled; +30 = 19:10 → disabled with reason.
+        now = DateTime(2026, 6, 4, 18, 40);
+        await open(tester, (c) => snoozeOpener(c));
+        expect(find.text('Past Dinner'), findsOneWidget);
+        expect(find.text('19:00'), findsOneWidget); // +20 result label, enabled
+      },
+    );
+
+    testWidgets('last meal: late presets reasoned "Past midnight"', (
+      tester,
+    ) async {
+      // 23:46 — dinner (sm-3) is last → bound is midnight. +10 = 23:56 fits;
+      // +15/+20/+30 cross it.
+      now = DateTime(2026, 6, 4, 23, 46);
+      await open(tester, (c) => snoozeOpener(c, mealId: 'sm-3'));
+      expect(find.text('Past midnight'), findsNWidgets(3));
+    });
+
+    testWidgets('all presets disabled → empty-state message + disabled CTA', (
+      tester,
+    ) async {
+      // 18:56 — snack base = now; +10 = 19:06 already past dinner 19:00.
+      now = DateTime(2026, 6, 4, 18, 56);
+      await open(tester, (c) => snoozeOpener(c));
+      expect(
+        find.text('No room to snooze — your next meal is too soon'),
+        findsOneWidget,
+      );
+      expect(find.text('Past Dinner'), findsNWidgets(4));
+      final cta = tester.widget<PrimaryCta>(find.byType(PrimaryCta));
+      check(cta.enabled).isFalse();
     });
   });
 }

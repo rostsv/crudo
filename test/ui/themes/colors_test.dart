@@ -11,6 +11,8 @@ void main() {
     expect(c.onSurfaceMut, const Color(0xFF8A938F));
     expect(c.secondaryContainer, const Color(0xFFE3E2E0));
     expect(c.onSecondaryContainer, const Color(0xFF3F4947));
+    expect(c.overdue, const Color(0xFFD97706));
+    expect(c.overdueSoft, const Color(0xFFFEF3C7));
   });
 
   test('lerp returns a CrudoColors', () {

@@ -216,6 +216,17 @@ class _PreviewHome extends StatelessWidget {
               status: MealStatus.upcoming,
               onTap: _noop,
             ),
+            const SizedBox(height: Spacing.sm),
+            MealCard(
+              title: 'Meal — overdue (snoozed)',
+              timeLabel: '14:00',
+              snoozedTimeLabel: '14:15',
+              mealTypeLabel: 'Lunch',
+              macros: const Macros(protein: 32, carbs: 45, fats: 12, kcal: 420),
+              ingredientNames: const ['Egg, whole', 'Greek Yogurt'],
+              status: MealStatus.overdue,
+              onTap: _noop,
+            ),
             const SizedBox(height: Spacing.lg),
 
             // MealSheet / SnoozeSheet are provider-driven (they watch

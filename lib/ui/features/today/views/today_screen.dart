@@ -151,10 +151,11 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                 for (final meal in day.meals) ...[
                   Builder(
                     builder: (context) {
-                      final status = deriveMealStatus(meal, day.date, now);
+                      final status = mealStatus(day, meal.id, now);
                       final snoozed =
                           meal.snoozedUntil != null &&
-                              status == MealStatus.upcoming
+                              (status == MealStatus.upcoming ||
+                                  status == MealStatus.overdue)
                           ? timeOfDayLabel(meal.snoozedUntil!.toLocal())
                           : null;
                       final tags = meal.meal.tags;
@@ -224,9 +225,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
   Widget _nudge(Day day, DateTime now) {
     final planned = plannedKcal(day);
     final consumed = consumedKcal(day);
-    final remaining = day.meals
-        .where((m) => deriveMealStatus(m, day.date, now) == MealStatus.upcoming)
-        .length;
+    final remaining = day.meals.where((m) {
+      final s = mealStatus(day, m.id, now);
+      return s == MealStatus.upcoming || s == MealStatus.overdue;
+    }).length;
     if (planned <= 0 || remaining == 0) return const SizedBox.shrink();
     final pct = (consumed / planned * 100).round();
     return Padding(
@@ -291,12 +293,12 @@ class _MealsHeader extends StatelessWidget {
     var done = 0;
     var partial = 0;
     for (final m in day.meals) {
-      switch (deriveMealStatus(m, day.date, now)) {
+      switch (mealStatus(day, m.id, now)) {
         case MealStatus.done:
           done++;
         case MealStatus.partial:
           partial++;
-        case MealStatus.upcoming || MealStatus.skipped:
+        case MealStatus.upcoming || MealStatus.overdue || MealStatus.skipped:
           break;
       }
     }

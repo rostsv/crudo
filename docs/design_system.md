@@ -58,7 +58,7 @@ The UI is built as stacked layers — like sheets of fine paper. **No borders.**
 
 ### Meal status colors
 
-Done = `primary` teal · Partial = `gold` · Upcoming = muted (clock icon) · Skipped = `error` red.
+Done = `primary` teal · Partial = `gold` · Upcoming = muted (clock icon) · Overdue = warm amber `#D97706` (`overdueSoft #FEF3C7` circle bg) — snooze-expired grace window (S05.1) · Skipped = `error` red.
 
 ### Streak day states
 

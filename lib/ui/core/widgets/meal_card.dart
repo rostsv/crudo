@@ -199,6 +199,7 @@ class MealCard extends StatelessWidget {
     MealStatus.done => colors.primary,
     MealStatus.partial => colors.goldDeep,
     MealStatus.upcoming => colors.onSurfaceMut,
+    MealStatus.overdue => colors.overdue,
     MealStatus.skipped => colors.error,
   };
 
@@ -206,6 +207,7 @@ class MealCard extends StatelessWidget {
     MealStatus.done => colors.primarySoft,
     MealStatus.partial => colors.gold,
     MealStatus.upcoming => colors.primary.withValues(alpha: 0.18),
+    MealStatus.overdue => colors.overdue,
     MealStatus.skipped => colors.error.withValues(alpha: 0.4),
   };
 }
@@ -241,6 +243,11 @@ class _StatusCircle extends StatelessWidget {
         null,
         colors.onSurfaceMut.withValues(alpha: 0.3),
         Icon(Icons.schedule, size: IconSizes.md, color: colors.onSurfaceMut),
+      ),
+      MealStatus.overdue => (
+        colors.overdueSoft,
+        null,
+        Icon(Icons.schedule, size: IconSizes.md, color: colors.overdue),
       ),
       MealStatus.skipped => (
         colors.errorSoft,

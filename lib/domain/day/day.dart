@@ -181,7 +181,7 @@ abstract class Day with _$Day {
   ) {
     _ensureUnlocked(today);
     final meal = _mealById(mealId);
-    if (deriveMealStatus(meal, date, now) != MealStatus.upcoming) {
+    if (deriveMealStatus(meal, date, now, now) != MealStatus.upcoming) {
       throw StateError('cannot edit $mealId: status is not upcoming');
     }
     return _withMeal(meal.copyWith(meal: newMeal));

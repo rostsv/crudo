@@ -15,6 +15,11 @@ import 'nutrition.dart';
 /// matching predicate — views consult these and never discover a guard by
 /// catching. Materialization + kcal live below (Task 6).
 
+/// Snooze grace period (S05.1) — the actionable window after a snooze
+/// expires before the meal auto-skips. Single source of truth; promote to
+/// Prefs if a user-configurable grace is ever needed.
+const snoozeGraceMinutes = 15;
+
 /// Locked = the label date is before today's label. Purely derived — correct
 /// even if the app was closed across many midnights (no timer, no write).
 bool isDayLocked(Day day, DateTime today) => day.date.isBefore(today);
@@ -24,7 +29,7 @@ bool isDayLocked(Day day, DateTime today) => day.date.isBefore(today);
 /// "delete what I didn't eat" adherence cheat.
 bool canEditMealContent(ScheduledMeal meal, DateTime dayDate, DateTime now) =>
     !dayDate.isBefore(localDateLabel(now)) &&
-    deriveMealStatus(meal, dayDate, now) == MealStatus.upcoming;
+    deriveMealStatus(meal, dayDate, now, now) == MealStatus.upcoming;
 
 bool canSkipMeal(Day day, String mealId, DateTime today) {
   if (isDayLocked(day, today)) return false;
@@ -36,7 +41,27 @@ bool canSnoozeMeal(Day day, String mealId, DateTime now, DateTime today) {
   if (isDayLocked(day, today)) return false;
   final meal = day.meals.where((m) => m.id == mealId).firstOrNull;
   if (meal == null || meal.meal.allChecked) return false;
+  if (meal.skippedAt != null) return false; // S05.1: skip = rejected commitment
   return maxSnoozeUntil(day, mealId, now).isAfter(now);
+}
+
+/// Human-readable reason snooze is unavailable, or null when eligible —
+/// the MealSheet's toast copy. Mirrors canSnoozeMeal's guard order exactly.
+String? snoozeIneligibilityReason(
+  Day day,
+  String mealId,
+  DateTime now,
+  DateTime today,
+) {
+  if (isDayLocked(day, today)) return 'Day is locked';
+  final meal = day.meals.where((m) => m.id == mealId).firstOrNull;
+  if (meal == null) return 'Meal not found';
+  if (meal.meal.allChecked) return 'Meal is done';
+  if (meal.skippedAt != null) return 'Meal is skipped';
+  if (!maxSnoozeUntil(day, mealId, now).isAfter(now)) {
+    return 'No room before your next meal';
+  }
+  return null;
 }
 
 bool canUnmarkMeal(Day day, String mealId, DateTime today) {
@@ -63,6 +88,32 @@ DateTime snoozeBaseFor(Day day, String mealId, DateTime now) {
 /// min(next meal by time strictly greater, end-of-day midnight) as UTC.
 DateTime maxSnoozeUntil(Day day, String mealId, DateTime now) =>
     day.maxSnoozeUntilFor(mealId, now);
+
+/// Grace end for a snoozed meal: min(snoozedUntil + grace, snooze bound).
+/// The bound (next meal / midnight) caps the grace — a meal snoozed AT the
+/// bound gets grace = 0 → immediate auto-skip (the user already pushed to
+/// the absolute limit). Returns UTC.
+DateTime computeGraceEnd(Day day, String mealId, DateTime snoozedUntil) {
+  final fixedGrace = snoozedUntil.add(
+    const Duration(minutes: snoozeGraceMinutes),
+  );
+  final bound = day.maxSnoozeUntilFor(mealId, snoozedUntil);
+  return fixedGrace.isBefore(bound) ? fixedGrace : bound;
+}
+
+/// Convenience derivation with graceEnd computed from the Day — the UI
+/// entry point. Domain-internal callers that only check `== upcoming`
+/// call deriveMealStatus directly with `now` as graceEnd.
+MealStatus mealStatus(Day day, String mealId, DateTime now) {
+  final meal = day.meals.firstWhere(
+    (m) => m.id == mealId,
+    orElse: () => throw StateError('no meal with id $mealId'),
+  );
+  final graceEnd = meal.snoozedUntil != null
+      ? computeGraceEnd(day, mealId, meal.snoozedUntil!)
+      : now;
+  return deriveMealStatus(meal, day.date, now, graceEnd);
+}
 
 /// The active plan covering [date]'s weekday (0=Mon…6=Sun). >1 match should
 /// be impossible (S09 blocks weekday conflicts) — defensively the lowest id

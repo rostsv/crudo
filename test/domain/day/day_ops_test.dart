@@ -251,11 +251,11 @@ void main() {
       final skipped = day().skipMeal('lunch', now, today);
       final done = skipped.markAllEaten('lunch', now, today);
       check(
-        deriveMealStatus(done.meals[1], today, now),
+        deriveMealStatus(done.meals[1], today, now, now),
       ).equals(MealStatus.done);
       final undone = done.unmarkAll('lunch', today);
       check(
-        deriveMealStatus(undone.meals[1], today, now),
+        deriveMealStatus(undone.meals[1], today, now, now),
       ).equals(MealStatus.skipped);
     });
     test('throws when nothing is checked', () {

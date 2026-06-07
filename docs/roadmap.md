@@ -22,15 +22,15 @@ Status legend: ✅ done · ◻ not started.
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| ✅ | Meal lifecycle engine (S05) | logic | S02 | Done `c441cef`. Product→Food rename (`FoodKind`, `kcalPer100g`, no override); instance ladder `Day→ScheduledMeal→MealSnapshot→MealItem→FoodSnapshot` (absolutes baked); Day frozen trio (`adherence`+`thresholdUsed`+`lockedAt`, `DayState` derived); status chain; Day ops + guards; snooze bounds; CoW materialization fns; day kcal. Spec: `2026-06-04-s05-*`; design: `docs/design/domain/2026-06-03-s05-*`. |
-| S06 | Today screen | ui | S03,S04,S05 | intake card (consumed vs planned), macro bars, streak chip, day-picker, meal list. |
+| ✅ | Meal lifecycle engine (S05) | logic | S02 | Done `c441cef`. Product→Food rename (`FoodKind`, `kcalPer100g`, no override); instance ladder `Day→ScheduledMeal→MealSnapshot→MealItem→FoodSnapshot` (absolutes baked); Day frozen trio (`adherence`+`thresholdUsed`+`lockedAt`, `DayState` derived); status chain; Day ops + guards; snooze bounds; CoW materialization fns; day kcal. Spec: `2026-06-04-s05-*`; design: `docs/design/domain/2026-06-03-s05-*`. **S05.1** (overdue 5th status + 15-min snooze grace) done `dd42bf6`, spec `2026-06-06-s05-1-*`. |
+| ✅ | Today screen (S06) | ui | S03,S04,S05 | Done `a326bbd`. Intake card (consumed vs planned), macro bars, streak chip, day-picker, meal list + marking sheet. **S06.1** refinements (deferred+animated intake, snooze re-base, meal-sheet design parity, card quick-complete `unmarkAll`) done `56a2442`, spec `2026-06-06-s06-1-*`. |
 
 ## Phase 2 — Food & meals
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| S07 | Custom food + validation | logic+ui | S02,S03 | ±10% kcal rule, add-custom-food, food library. |
-| S08 | Meal editor | ui | S03,S04,S07 | meal detail, add/edit meal, add-ingredient → custom-food callback. |
+| ✅ | Custom food + validation (S07) | logic+ui | S02,S03 | Done `23ff1b0`. ±10% kcal rule (input-time, no override field), custom-food form (Product\|Dish toggle, category chips, delete+confirm), food library list at `/foods` (search + grouping; reusable for the S08 picker). Spec: `2026-06-06-s07-*`. |
+| S08 | Meal editor | ui | S03,S04,S07 | meal detail route, instance editor (draft → `replaceMeal`), swap-from-library, add-ingredient → custom-food callback, CoW future-day detach. Spec+plan: `2026-06-07-s08-*`. |
 
 ## Phase 3 — Plans
 

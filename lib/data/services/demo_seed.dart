@@ -58,7 +58,7 @@ const demoMealTemplates = <MealTemplate>[
 const demoPlanTemplate = PlanTemplate(
   id: 'demo-plan-everyday',
   name: 'Everyday Plan',
-  days: [1, 2, 3, 4, 5, 6, 7],
+  days: [0, 1, 2, 3, 4, 5, 6],
   slots: [
     PlanSlot(
       id: 'demo-slot-breakfast',

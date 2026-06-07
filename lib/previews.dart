@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'domain/food/food.dart';
 import 'domain/shared/enums.dart';
 import 'domain/shared/macros.dart';
 import 'ui/core/themes/colors.dart';
@@ -13,6 +14,9 @@ import 'ui/core/widgets/meal_card.dart';
 import 'ui/core/widgets/macro_ring.dart';
 import 'ui/core/widgets/sheet.dart';
 import 'ui/core/widgets/toast.dart';
+import 'ui/features/foods/views/food_row.dart';
+import 'ui/features/foods/views/kcal_card.dart';
+import 'ui/features/foods/views/macro_field.dart';
 import 'ui/features/today/views/day_strip.dart';
 import 'ui/features/today/views/intake_card.dart';
 import 'ui/features/today/views/nudge_card.dart';
@@ -217,6 +221,67 @@ class _PreviewHome extends StatelessWidget {
             // MealSheet / SnoozeSheet are provider-driven (they watch
             // dayControllerProvider) — previewed in-app via the dev flavor,
             // not from this static gallery.
+            const SizedBox(height: Spacing.lg),
+
+            const Text('FoodRow', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            const FoodRow(
+              food: Food(
+                id: 'preview-chicken',
+                name: 'Chicken breast',
+                category: FoodCategory.meat,
+                protein: 31,
+                carbs: 0,
+                fats: 3.6,
+                kcalPer100g: 156.4,
+              ),
+            ),
+            const SizedBox(height: Spacing.sm),
+            FoodRow(
+              food: const Food(
+                id: 'preview-shake',
+                name: 'My shake',
+                category: FoodCategory.custom,
+                protein: 30,
+                carbs: 10,
+                fats: 5,
+                kcalPer100g: 205,
+                isCustom: true,
+              ),
+              onTap: _noop,
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('MacroField', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            MacroField(
+              label: 'PROTEIN',
+              accent: CrudoColors.light.primary,
+              controller: TextEditingController(text: '31'),
+              onChanged: (_) {},
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('KcalCard', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            KcalCard(
+              calculated: 290,
+              overrideController: TextEditingController(),
+              onOverrideChanged: (_) {},
+            ),
+            const SizedBox(height: Spacing.sm),
+            KcalCard(
+              calculated: 290,
+              overrideController: TextEditingController(text: '350'),
+              onOverrideChanged: (_) {},
+              errorText:
+                  'Override differs by 21% from macros. Max allowed is 10%.',
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            // FoodLibraryScreen / FoodFormScreen are provider-driven — verified
+            // via the /foods route (dev) + widget tests, not from this static
+            // gallery.
           ],
         ),
       ),

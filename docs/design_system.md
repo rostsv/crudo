@@ -139,6 +139,7 @@ Component-intrinsic dimensions are **named constants in the widget**, must sit o
 | Check circle | 28 |
 | Avatar | 96 |
 | Primary CTA min-height | 56 |
+| Macro accent bar | 8 × 36 |
 
 ### Opacities
 

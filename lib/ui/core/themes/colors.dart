@@ -146,6 +146,12 @@ class CrudoColors extends ThemeExtension<CrudoColors> {
     );
   }
 
+  /// Accent colors for the three macros, shared between food-form fields and
+  /// intake-card bars. Protein → primary, Carbs → gold, Fats → bronze.
+  Color get proteinColor => primary;
+  Color get carbsColor => gold;
+  Color get fatsColor => bronze;
+
   @override
   CrudoColors lerp(ThemeExtension<CrudoColors>? other, double t) {
     if (other is! CrudoColors) return this;

@@ -37,7 +37,7 @@ Status legend: ✅ done · ◻ not started.
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
 | ✅ | Plan logic + scheduling (S09) | logic | S02,S03 | Done `a49618c`. Pure-domain `plan_scheduling.dart`: cross-plan weekday-conflict detection + steal-override, ≥1-plan delete guard, uncovered-weekday detection, clone plan & meal; `selectPlanForDate` relocated from `meal_lifecycle` w/ export shim. snapshot-on-schedule + template-edits-future-only already shipped (S05/S06/S08). Spec+plan: `2026-06-08-s09-*`. |
-| S10 | Plans list + detail | ui | S04,S09 | read-only list, detail edit, weekday assign, conflict modal. |
+| ✅ | Plans list + detail (S10) | ui | S04,S09 | Done `f6088d6` (verified 412 green). Plans tab (derived target, weekday chips, Today badge, Inactive) + pushed `/plans/:id` editor: rename, weekday assign w/ inline conflict + save-time steal-override modal, active pause/resume (days kept dormant), delete w/ ≥1-plan guard, non-blocking uncovered confirm, discard guard. Slots read-only; creation → S11. Spec+plan: `2026-06-08-s10-*`. Review fixes: `canDeletePlan` guard into controller, repo `getAll` slot-resolution (vs autoDispose stream), +9 controller unit tests. |
 | S11 | Create-plan flow | ui | S04,S08,S09 | name/goal/weekdays/meal-picker, live macro preview, mid-flow add-meal with preserved draft. |
 
 ## Phase 4 — Motivation

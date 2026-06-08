@@ -9,6 +9,7 @@ import 'package:crudo/ui/features/history/views/history_screen.dart';
 import 'package:crudo/ui/features/meals/views/add_ingredient_screen.dart';
 import 'package:crudo/ui/features/meals/views/meal_detail_screen.dart';
 import 'package:crudo/ui/features/meals/views/meal_editor_screen.dart';
+import 'package:crudo/ui/features/plans/views/plan_detail_screen.dart';
 import 'package:crudo/ui/features/plans/views/plans_screen.dart';
 import 'package:crudo/ui/features/profile/views/profile_screen.dart';
 import 'package:crudo/ui/features/today/views/today_screen.dart';
@@ -75,6 +76,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 FoodFormScreen(foodId: state.pathParameters['id']!),
           ),
         ],
+      ),
+
+      // S10: plan detail / editing — pushed over the shell.
+      GoRoute(
+        path: '/plans/:id',
+        builder: (context, state) =>
+            PlanDetailScreen(planId: state.pathParameters['id']!),
       ),
 
       // S08: meal detail / editor / picker — pushed over the shell. :date is

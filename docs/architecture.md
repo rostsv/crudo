@@ -211,7 +211,73 @@ Scheduled locally per the user's plan and `Prefs` toggles:
 
 ---
 
-## 12. Project skills (`.agents/skills/`)
+## 12. Testing patterns & known pitfalls
+
+### 12.1 Widget-test teardown race with Riverpod streams
+
+**Symptom:** Test passes all assertions, then fails at teardown with `Bad state: Cannot close sink while adding stream.` (or `Cannot add event while adding stream`).
+
+**Root cause:** A `ProviderContainer` is disposed via `addTearDown(c.dispose)` while a `StreamController` (inside a Riverpod provider or repository) is still emitting an event from an async operation (e.g., `dayRepository.save()`). The container disposal triggers `ref.onDispose` → `controller.close()`, which races with the controller's own `add()` call.
+
+**Why this happens with `SwapSheet` / future-day swaps:**
+1. `replaceMeal()` → `dayRepository.save()` → `_changes.add(null)` → stream listeners fire
+2. The widget test's `ProviderSubscription` (from `c.listen(...)`) is still active
+3. `addTearDown(c.dispose)` runs automatically at end of test
+4. Container disposal closes the `StreamController` while the stream event is mid-flight
+5. Also: `showCrudoToast()` creates a 4.5s timer; if the widget tree is disposed before the timer fires, the `FakeTimer` leaks and the test binding complains
+
+**Fix pattern:**
+
+```dart
+// ❌ DON'T: addTearDown(c.dispose) in a shared helper
+ProviderContainer container() {
+  final c = ProviderContainer(...);
+  addTearDown(c.dispose);  // Races with in-flight stream events
+  return c;
+}
+
+// ✅ DO: manual teardown in order: widget tree → subscriptions → container
+final sub = c.listen(dayControllerProvider(date), (_, _) {});
+// ... test body ...
+
+// 1. Remove widget tree (clears overlays, toasts, timers)
+await tester.pumpWidget(Container());
+await tester.pumpAndSettle();
+
+// 2. Close provider subscriptions (stops stream listeners)
+sub.close();
+
+// 3. Let any microtask-flush settle
+await Future<void>.delayed(Duration.zero);
+
+// 4. NOW dispose the container
+container.dispose();
+```
+
+**For toast timers:** After any tap that triggers `showCrudoToast()`, pump the full duration before teardown:
+
+```dart
+await tester.tap(find.byKey(const ValueKey('swap-demo-meal-dinner')));
+await tester.pump();
+await tester.pump(const Duration(milliseconds: 200));
+await tester.pump(const Duration(seconds: 5)); // 4.5s toast + margin
+```
+
+**For multi-swap tests:** If a test does one swap via controller (not UI) then pumps the widget tree, the stream broadcast from the first swap may not be fully settled. Add `await tester.pumpAndSettle()` between the controller swap and the widget pump.
+
+### 12.2 `pumpAndSettle()` vs explicit `pump(Duration)` after async taps
+
+**Rule:** After any tap that triggers an async callback doing `Navigator.pop()` + toast, use:
+
+```dart
+await tester.tap(find.byKey(...));
+await tester.pump();
+await tester.pump(const Duration(milliseconds: 200));
+```
+
+`pumpAndSettle()` deadlocks when the async future completes mid-pump and the pop corrupts the test binding's stream sink. Explicit `pump(Duration)` is safe because it does not wait for frame settling.
+
+## 13. Project skills (`.agents/skills/`)
 
 These Dart/Flutter agent skills define how to do common tasks in this repo. Read and follow the matching skill before that kind of work; they are the authority for tooling and conventions (§1).
 

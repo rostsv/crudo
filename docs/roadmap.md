@@ -89,3 +89,11 @@ Status legend: ✅ done · ◻ not started.
 **Critical path:** S01 → S02 → S03/S04 → feature fan-out (S05–S18) → backend (S19–S21) → auth/monetize (S22–S24) → polish (S25).
 
 **Parallelizable once foundation lands:** the logic engines (S05, S07, S09, S12) are independent and can be specced/built in parallel; their UI counterparts follow each.
+
+---
+
+## Parked — post-MVP (not specced)
+
+Ideas captured but deliberately out of v1 scope. Each needs its own spec when picked up.
+
+- **Temporary date-pinned plan override.** A one-off, auto-reverting exception to the recurring weekday schedule: pin a specific date (or short range) to a chosen plan regardless of its weekday — e.g. "use my Travel plan for this Sat+Sun in Paris," then the schedule reverts by itself. New domain concept beyond S09's weekday model: a `date → planId` override that `selectPlanForDate` consults before the weekday match. Entry point is the **day/calendar view** (S06/S13), not the plans list. Distinct from `PlanTemplate.active` (a global, recurring on/off — not date-scoped).

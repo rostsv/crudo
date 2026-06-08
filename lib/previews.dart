@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'domain/food/food.dart';
+import 'domain/meal/food_snapshot.dart';
 import 'domain/shared/enums.dart';
+import 'domain/shared/grams.dart';
 import 'domain/shared/macros.dart';
 import 'ui/core/themes/colors.dart';
 import 'ui/core/themes/theme.dart';
@@ -17,6 +19,7 @@ import 'ui/core/widgets/toast.dart';
 import 'ui/features/foods/views/food_row.dart';
 import 'ui/features/foods/views/kcal_card.dart';
 import 'ui/features/foods/views/macro_field.dart';
+import 'ui/features/meals/views/grams_entry.dart';
 import 'ui/features/today/views/day_strip.dart';
 import 'ui/features/today/views/intake_card.dart';
 import 'ui/features/today/views/nudge_card.dart';
@@ -229,9 +232,9 @@ class _PreviewHome extends StatelessWidget {
             ),
             const SizedBox(height: Spacing.lg),
 
-            // MealSheet / SnoozeSheet are provider-driven (they watch
-            // dayControllerProvider) — previewed in-app via the dev flavor,
-            // not from this static gallery.
+            // MealDetailScreen / MealEditorScreen / AddIngredientScreen /
+            // SnoozeSheet / SwapSheet are provider-driven — verified via the
+            // dev flavor + widget tests, not from this static gallery.
             const SizedBox(height: Spacing.lg),
 
             const Text('FoodRow', style: CrudoText.headline),
@@ -260,6 +263,26 @@ class _PreviewHome extends StatelessWidget {
                 isCustom: true,
               ),
               onTap: _noop,
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('GramsEntry', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            GramsEntry(
+              baseline: FoodSnapshot.from(
+                const Food(
+                  id: 'preview-chicken',
+                  name: 'Chicken breast',
+                  category: FoodCategory.meat,
+                  protein: 31,
+                  carbs: 0,
+                  fats: 3.6,
+                  kcalPer100g: 156.4,
+                ),
+                const Grams(100),
+              ),
+              initialGrams: 150,
+              onChanged: (_) {},
             ),
             const SizedBox(height: Spacing.lg),
 

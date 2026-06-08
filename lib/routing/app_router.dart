@@ -2,9 +2,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:crudo/ui/core/widgets/app_shell.dart';
+import 'package:crudo/ui/core/formatting.dart';
 import 'package:crudo/ui/features/foods/views/food_form_screen.dart';
 import 'package:crudo/ui/features/foods/views/food_library_screen.dart';
 import 'package:crudo/ui/features/history/views/history_screen.dart';
+import 'package:crudo/ui/features/meals/views/add_ingredient_screen.dart';
+import 'package:crudo/ui/features/meals/views/meal_detail_screen.dart';
+import 'package:crudo/ui/features/meals/views/meal_editor_screen.dart';
 import 'package:crudo/ui/features/plans/views/plans_screen.dart';
 import 'package:crudo/ui/features/profile/views/profile_screen.dart';
 import 'package:crudo/ui/features/today/views/today_screen.dart';
@@ -69,6 +73,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: ':id',
             builder: (context, state) =>
                 FoodFormScreen(foodId: state.pathParameters['id']!),
+          ),
+        ],
+      ),
+
+      // S08: meal detail / editor / picker — pushed over the shell. :date is
+      // the ISO day label (dayParam/parseDayParam).
+      GoRoute(
+        path: '/meal/:date/:mealId',
+        builder: (context, state) => MealDetailScreen(
+          date: parseDayParam(state.pathParameters['date']!),
+          mealId: state.pathParameters['mealId']!,
+        ),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            builder: (context, state) => MealEditorScreen(
+              date: parseDayParam(state.pathParameters['date']!),
+              mealId: state.pathParameters['mealId']!,
+            ),
+            routes: [
+              GoRoute(
+                path: 'add-ingredient',
+                builder: (context, state) => const AddIngredientScreen(),
+              ),
+            ],
           ),
         ],
       ),

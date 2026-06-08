@@ -4,16 +4,18 @@ import 'package:crudo/data/services/id_generator.dart';
 import 'package:crudo/data/services/seed_service.dart';
 import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/services/meal_lifecycle.dart';
-import 'package:crudo/ui/core/themes/colors.dart';
+import 'package:crudo/ui/core/formatting.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
 import 'package:crudo/ui/core/widgets/meal_card.dart';
-import 'package:crudo/ui/features/today/views/intake_card.dart';
+import 'package:crudo/ui/features/meals/views/meal_detail_screen.dart';
 import 'package:crudo/ui/features/today/view_models/day_controller.dart';
 import 'package:crudo/ui/features/today/view_models/today_providers.dart';
+import 'package:crudo/ui/features/today/views/intake_card.dart';
 import 'package:crudo/ui/features/today/views/today_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../helpers/fake_id_generator.dart';
 
@@ -40,15 +42,18 @@ void main() {
     return c;
   }
 
-  Widget app(ProviderContainer c) => UncontrolledProviderScope(
-    container: c,
-    child: MaterialApp(
-      theme: crudoTheme,
-      home: Scaffold(
-        backgroundColor: CrudoColors.light.surface,
-        body: const TodayScreen(),
+  GoRouter router(ProviderContainer c) => GoRouter(
+    initialLocation: '/today',
+    routes: [
+      GoRoute(path: '/today', builder: (context, state) => const TodayScreen()),
+      GoRoute(
+        path: '/meal/:date/:mealId',
+        builder: (context, state) => MealDetailScreen(
+          date: parseDayParam(state.pathParameters['date']!),
+          mealId: state.pathParameters['mealId']!,
+        ),
       ),
-    ),
+    ],
   );
 
   Future<ProviderContainer> pumpToday(WidgetTester tester) async {
@@ -58,7 +63,12 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(app(c));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(theme: crudoTheme, routerConfig: router(c)),
+      ),
+    );
     await tester.pumpAndSettle();
     return c;
   }
@@ -98,36 +108,45 @@ void main() {
     expect(find.text('0/4 complete'), findsOneWidget);
   });
 
-  testWidgets('auto-skipped meal still opens the sheet and can be marked eaten '
-      '(lenient missed meals)', (tester) async {
-    final c = await pumpToday(tester);
-    // Breakfast (08:00) is derived skipped at 09:30 — tap it anyway.
-    await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(find.text('Mark Done'), findsOneWidget);
-    await tester.tap(find.text('Mark Done'));
-    await tester.pumpAndSettle();
-    final day = await c.read(dayControllerProvider(today).future);
-    expect(day.meals.first.meal.allChecked, isTrue);
-    expect(find.text('1/4 complete'), findsOneWidget);
-  });
+  testWidgets(
+    'today: tapping a meal card pushes MealDetailScreen; Mark Done works',
+    (tester) async {
+      final c = await pumpToday(tester);
+      // Breakfast (08:00) is derived skipped at 09:30 — tap it anyway.
+      await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+      expect(find.byType(MealDetailScreen), findsOneWidget);
+      expect(find.text('Mark Done'), findsOneWidget);
+      await tester.tap(find.text('Mark Done'));
+      await tester.pumpAndSettle();
+      // Popped back to TodayScreen.
+      expect(find.byType(TodayScreen), findsOneWidget);
+      final day = await c.read(dayControllerProvider(today).future);
+      expect(day.meals.first.meal.allChecked, isTrue);
+      expect(find.text('1/4 complete'), findsOneWidget);
+    },
+  );
 
-  testWidgets('Skip from the sheet marks the meal skipped', (tester) async {
+  testWidgets('today: Skip from detail marks the meal skipped', (tester) async {
     final c = await pumpToday(tester);
     await tester.tap(find.text('Chicken Rice Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
+    expect(find.byType(MealDetailScreen), findsOneWidget);
     await tester.tap(find.text('Skip'));
     await tester.pumpAndSettle();
+    // Popped back.
+    expect(find.byType(TodayScreen), findsOneWidget);
     final day = await c.read(dayControllerProvider(today).future);
     expect(day.meals.firstWhere((m) => m.id == 'sm-1').skippedAt, isNotNull);
   });
 
-  testWidgets('Snooze flows from the sheet tile; card shows both times', (
+  testWidgets('Snooze flows from the detail tile; card shows both times', (
     tester,
   ) async {
     final c = await pumpToday(tester);
     await tester.tap(find.text('Chicken Rice Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
+    expect(find.byType(MealDetailScreen), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('tile-snooze')));
     await tester.pumpAndSettle();
     expect(find.text('Snooze, then eat.'), findsOneWidget);
@@ -139,10 +158,8 @@ void main() {
       day.meals.firstWhere((m) => m.id == 'sm-1').snoozedUntil,
       DateTime(2026, 6, 4, 12, 45).toUtc(),
     );
-    // MealSheet header shows the snoozed time while still open.
-    expect(find.textContaining('12:30 → 12:45'), findsOneWidget);
-    // Close the meal sheet and verify the card renders the snoozed time.
-    await tester.tapAt(const Offset(20, 20));
+    // Close the detail screen and verify the card renders the snoozed time.
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
     expect(find.textContaining('12:45'), findsOneWidget);
   });
@@ -158,7 +175,7 @@ void main() {
     expect(find.text("You're 0% of the way there."), findsNothing); // no nudge
   });
 
-  testWidgets('future day is a read-only preview — cards not tappable', (
+  testWidgets('future day: cards are tappable and push MealDetailScreen', (
     tester,
   ) async {
     final c = await pumpToday(tester);
@@ -167,7 +184,9 @@ void main() {
     expect(find.byType(MealCard), findsNWidgets(4));
     await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    expect(find.text('Mark Done'), findsNothing); // no sheet
+    expect(find.byType(MealDetailScreen), findsOneWidget);
+    // No footer (Mark Done/Skip) on future days.
+    expect(find.text('Mark Done'), findsNothing);
     // Preview was never persisted.
     final repo = c.read(dayRepositoryProvider);
     expect(await repo.getByDate(DateTime.utc(2026, 6, 5)), isNull);
@@ -182,23 +201,18 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
   });
 
-  testWidgets('hero freezes while sheet open, settles after close', (
+  testWidgets('hero freezes while route open, settles after pop', (
     tester,
   ) async {
     final c = await pumpToday(tester);
-    // Open the first meal sheet.
+    // Open the first meal detail (full-screen route, hero hidden behind it).
     await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    // Toggle a single item (does not close the sheet).
-    await tester.tap(find.text('Oats (rolled, dry)'));
+    // Toggle a single item (does not close the route).
+    await tester.tap(find.byKey(const ValueKey('item-check-0')));
     await tester.pumpAndSettle();
-    // The hero should still show 0 (frozen) because the sheet is still open.
-    expect(
-      find.descendant(of: find.byType(IntakeCard), matching: find.text('0')),
-      findsOneWidget,
-    );
-    // Close the sheet.
-    Navigator.of(tester.element(find.byType(TodayScreen))).pop();
+    // Pop the route — freeze clears in .whenComplete.
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
     // Now the hero should show the updated kcal.
     final day = await c.read(dayControllerProvider(today).future);
@@ -208,7 +222,7 @@ void main() {
 
   testWidgets('hero animates to new value after state change', (tester) async {
     final c = await pumpToday(tester);
-    // Mark the first meal as eaten via the controller directly (no sheet).
+    // Mark the first meal as eaten via the controller directly (no route).
     final day = await c.read(dayControllerProvider(today).future);
     final mealId = day.meals.first.id;
     await c.read(dayControllerProvider(today).notifier).markAllEaten(mealId);
@@ -321,7 +335,12 @@ void main() {
           .snooze('sm-2', DateTime(2026, 6, 4, 16, 15));
       // Cross into the grace window: 16:15 + 15m → 16:30 (dinner 19:00 no cap).
       now = DateTime(2026, 6, 4, 16, 20);
-      await tester.pumpWidget(app(c));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: c,
+          child: MaterialApp.router(theme: crudoTheme, routerConfig: router(c)),
+        ),
+      );
       await tester.pumpAndSettle();
       expect(find.text('OVERDUE'), findsOneWidget);
       // The card's time row is a Text.rich — match the span, not a Text widget.
@@ -339,7 +358,12 @@ void main() {
         .read(dayControllerProvider(today).notifier)
         .snooze('sm-2', DateTime(2026, 6, 4, 16, 15));
     now = DateTime(2026, 6, 4, 16, 20);
-    await tester.pumpWidget(app(c));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(theme: crudoTheme, routerConfig: router(c)),
+      ),
+    );
     await tester.pumpAndSettle();
     // snack overdue + dinner upcoming = 2 (breakfast/lunch auto-skipped).
     expect(
@@ -355,7 +379,12 @@ void main() {
         .read(dayControllerProvider(today).notifier)
         .snooze('sm-2', DateTime(2026, 6, 4, 16, 15));
     now = DateTime(2026, 6, 4, 16, 20);
-    await tester.pumpWidget(app(c));
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: c,
+        child: MaterialApp.router(theme: crudoTheme, routerConfig: router(c)),
+      ),
+    );
     await tester.pumpAndSettle();
     await tester.tap(
       find.byKey(const ValueKey('meal-status-overdue')),

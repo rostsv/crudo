@@ -160,6 +160,45 @@ void main() {
     });
   });
 
+  group('mealSnapshotFromTemplate', () {
+    const oats = Food(
+      id: 'f-oats',
+      name: 'Oats',
+      kind: FoodKind.product,
+      category: FoodCategory.grain,
+      protein: 13,
+      carbs: 60,
+      fats: 7,
+      kcalPer100g: 370,
+    );
+    const template = MealTemplate(
+      id: 't1',
+      name: 'Bowl',
+      tags: [MealTag.breakfast],
+      foods: [
+        FoodRef(foodId: 'f-oats', grams: Grams(50)),
+        FoodRef(foodId: 'ghost', grams: Grams(10)),
+      ],
+    );
+
+    test('resolves refs, bakes absolutes, drops dangling, nothing checked', () {
+      final snap = mealSnapshotFromTemplate(template, const [oats]);
+      check(snap.sourceMealTemplateId).equals('t1');
+      check(snap.name).equals('Bowl');
+      check(snap.tags).deepEquals([MealTag.breakfast]);
+      check(snap.items.length).equals(1);
+      check(snap.items.single.checked).isFalse();
+      check(snap.items.single.food.sourceFoodId).equals('f-oats');
+      check(snap.items.single.food.kcal).equals(185); // 370 × 50/100
+      check(snap.items.single.food.protein).equals(6.5);
+    });
+
+    test('all refs dangling → empty items (caller decides)', () {
+      final snap = mealSnapshotFromTemplate(template, const []);
+      check(snap.items).isEmpty();
+    });
+  });
+
   group('day kcal/macros', () {
     test(
       'planned sums all items; consumed sums checked only; empty day 0/0',

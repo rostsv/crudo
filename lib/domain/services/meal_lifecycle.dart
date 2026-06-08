@@ -126,6 +126,26 @@ PlanTemplate? selectPlanForDate(List<PlanTemplate> plans, DateTime date) {
   return matches.isEmpty ? null : matches.first;
 }
 
+/// Resolves a meal template into a day-ready snapshot: each FoodRef becomes
+/// an UNCHECKED MealItem whose FoodSnapshot bakes the absolutes at creation
+/// (the only snapshot factory — S05 §1.4). Dangling food refs are dropped
+/// defensively. Shared by buildDayFromPlan and the S08 swap flow, so a
+/// replacement MealSnapshot can never arrive with pre-checked items
+/// (S05-review obligation discharged by construction).
+MealSnapshot mealSnapshotFromTemplate(MealTemplate template, List<Food> foods) {
+  final foodsById = {for (final f in foods) f.id: f};
+  return MealSnapshot(
+    sourceMealTemplateId: template.id,
+    name: template.name,
+    tags: template.tags,
+    items: [
+      for (final ref in template.foods)
+        if (foodsById[ref.foodId] != null)
+          MealItem(food: FoodSnapshot.from(foodsById[ref.foodId]!, ref.grams)),
+    ],
+  );
+}
+
 /// Materializes a Day from a plan (copy-on-write read path — the S06
 /// controller persists the result ONLY for today, or on first edit of a
 /// future day; otherwise it's a throwaway preview).
@@ -144,31 +164,15 @@ Day buildDayFromPlan(
 ) {
   if (plan == null) return Day(date: date);
   final templatesById = {for (final t in mealTemplates) t.id: t};
-  final foodsById = {for (final f in foods) f.id: f};
 
   final slots = [...plan.slots]..sort((a, b) => a.time.compareTo(b.time));
   final meals = <ScheduledMeal>[];
   for (final slot in slots) {
     final template = templatesById[slot.mealTemplateId];
     if (template == null) continue;
-    final items = <MealItem>[
-      for (final ref in template.foods)
-        if (foodsById[ref.foodId] != null)
-          MealItem(food: FoodSnapshot.from(foodsById[ref.foodId]!, ref.grams)),
-    ];
-    if (items.isEmpty) continue;
-    meals.add(
-      ScheduledMeal(
-        id: newId(),
-        time: slot.time,
-        meal: MealSnapshot(
-          sourceMealTemplateId: template.id,
-          name: template.name,
-          tags: template.tags,
-          items: items,
-        ),
-      ),
-    );
+    final snapshot = mealSnapshotFromTemplate(template, foods);
+    if (snapshot.items.isEmpty) continue;
+    meals.add(ScheduledMeal(id: newId(), time: slot.time, meal: snapshot));
   }
   return Day(
     date: date,

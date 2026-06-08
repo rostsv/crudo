@@ -8,10 +8,10 @@ import '../../../core/themes/dimensions.dart' as dim;
 import '../../../core/themes/typography.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
-import '../view_models/day_controller.dart';
-import '../view_models/today_providers.dart';
-import 'formatting.dart';
-import 'sheet_actions.dart';
+import '../../today/view_models/day_controller.dart';
+import '../../today/view_models/today_providers.dart';
+import '../../../core/formatting.dart';
+import '../../../core/widgets/sheet_actions.dart';
 
 /// The canned snooze durations (minutes) — sheets.jsx SnoozeSheet.
 const List<int> snoozePresetMinutes = <int>[10, 15, 20, 30];

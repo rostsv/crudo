@@ -1,15 +1,4 @@
-// Formatting helpers shared across food-feature views (S07).
-// Mirrors the pattern of lib/ui/features/today/views/formatting.dart:
-// pure functions, no Flutter/Riverpod imports.
-
-/// Trims trailing ".0" — "3.6" stays "3.6", "31.0" renders as "31".
-String gramsText(double v) => v == v.roundToDouble() ? '${v.round()}' : '$v';
-
-/// Normalises a user-typed number string (comma or dot decimal) and parses
-/// it. Returns null when the string is not a valid number.
-///
-/// Example: parseGrams('12,5') → 12.5; parseGrams('350.5') → 350.5.
-double? parseGrams(String s) => double.tryParse(s.replaceAll(',', '.'));
+export 'package:crudo/ui/core/formatting.dart' show gramsText, parseGrams;
 
 /// Percentage string for the kcal mismatch banner. Shows one decimal place
 /// when the rounded integer would equal 10 (to avoid "10%" looking exact

@@ -63,7 +63,7 @@ final class FoodDraftControllerProvider
 }
 
 String _$foodDraftControllerHash() =>
-    r'45775a4171d111b75c3f00e1cffbab1417a33c24';
+    r'4018cf03ed3e4e429cbc27d7c80372e06c15766b';
 
 /// Add/edit-food form controller (S07). `foodId == null` = create;
 /// otherwise loads the existing CUSTOM food for editing. Seed foods are

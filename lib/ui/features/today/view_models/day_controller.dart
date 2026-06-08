@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:crudo/config/di.dart';
 import 'package:crudo/data/services/id_generator.dart';
 import 'package:crudo/domain/day/day.dart';
+import 'package:crudo/domain/meal/meal_snapshot.dart';
 import 'package:crudo/domain/services/meal_lifecycle.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -63,6 +64,27 @@ class DayController extends _$DayController {
 
   Future<void> snooze(String mealId, DateTime until) =>
       _apply((d, now, today) => d.snoozeMeal(mealId, until, now, today));
+
+  /// Content op (S08): allowed for today AND future days — saving a
+  /// future-day preview IS the copy-on-write detach (S05 §4.3: the repo
+  /// hit wins on every later read; template edits no longer touch it).
+  /// Past days reject. Marking/skip/snooze stay today-only (_apply).
+  Future<void> replaceMeal(String mealId, MealSnapshot newMeal) =>
+      _applyContent(
+        (d, now, today) => d.replaceMeal(mealId, newMeal, now, today),
+      );
+
+  Future<void> _applyContent(
+    Day Function(Day day, DateTime now, DateTime today) op,
+  ) async {
+    final today = ref.read(todayProvider);
+    if (date.isBefore(today)) {
+      throw StateError('day $date is read-only (today is $today)');
+    }
+    final day = await future;
+    final now = ref.read(clockProvider)();
+    await ref.read(dayRepositoryProvider).save(op(day, now, today));
+  }
 
   /// All ops are today-only in S06 (future-day edits = the S08 detach
   /// path; past days are locked by the domain anyway). Guard violations

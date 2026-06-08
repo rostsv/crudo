@@ -22,6 +22,49 @@ const _egg = Food(
 
 void main() {
   group('FoodSnapshot', () {
+    group('scaledTo', () {
+      const oats = Food(
+        id: 'f-oats',
+        name: 'Oats',
+        kind: FoodKind.product,
+        category: FoodCategory.grain,
+        protein: 13,
+        carbs: 60,
+        fats: 7,
+        kcalPer100g: 370,
+      );
+
+      test('scales absolutes linearly and replaces grams', () {
+        final base = FoodSnapshot.from(oats, const Grams(100));
+        final scaled = base.scaledTo(const Grams(150));
+        check(scaled.grams).equals(const Grams(150));
+        check(scaled.protein).equals(19.5);
+        check(scaled.carbs).equals(90);
+        check(scaled.fats).equals(10.5);
+        check(scaled.kcal).equals(555);
+        check(scaled.sourceFoodId).equals('f-oats');
+        check(scaled.name).equals('Oats');
+      });
+
+      test('zero-macro food stays zero at any weight', () {
+        const water = Food(
+          id: 'f-water',
+          name: 'Water',
+          kind: FoodKind.product,
+          category: FoodCategory.custom,
+          protein: 0,
+          carbs: 0,
+          fats: 0,
+          kcalPer100g: 0,
+        );
+        final scaled = FoodSnapshot.from(
+          water,
+          const Grams(100),
+        ).scaledTo(const Grams(250));
+        check(scaled.kcal).equals(0);
+      });
+    });
+
     test('from() bakes absolutes (per-100g × grams / 100)', () {
       final s = FoodSnapshot.from(_egg, const Grams(60));
       check(s.kcal).isCloseTo(93.0, 1e-9);

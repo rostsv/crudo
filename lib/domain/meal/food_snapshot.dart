@@ -47,4 +47,18 @@ abstract class FoodSnapshot with _$FoodSnapshot {
       kcal: food.kcalPer100g * factor,
     );
   }
+
+  /// The same food at a different weight: absolutes scale linearly
+  /// (newGrams / grams) — never re-resolves the library; the snapshot is
+  /// the source (S05 §1.1: per-100g derivable, grams edits scale linearly).
+  FoodSnapshot scaledTo(Grams newGrams) {
+    final factor = newGrams.value / grams.value;
+    return copyWith(
+      grams: newGrams,
+      protein: protein * factor,
+      carbs: carbs * factor,
+      fats: fats * factor,
+      kcal: kcal * factor,
+    );
+  }
 }

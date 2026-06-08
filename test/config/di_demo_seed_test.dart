@@ -19,7 +19,7 @@ void main() {
     final plans = await c.read(planTemplateRepositoryProvider).getAll();
     check(meals.length).equals(4);
     check(plans.length).equals(1);
-    check(plans.single.days).deepEquals([1, 2, 3, 4, 5, 6, 7]);
+    check(plans.single.days).deepEquals([0, 1, 2, 3, 4, 5, 6]);
     check(plans.single.slots.length).equals(4);
   });
 

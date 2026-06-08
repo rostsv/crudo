@@ -225,4 +225,97 @@ void main() {
       subTomorrow.close();
     },
   );
+
+  group('replaceMeal', () {
+    setUp(() {
+      now = DateTime(2026, 6, 4, 9, 30);
+    });
+
+    test('today: persists, slot id + time survive, unchecked', () async {
+      final c = container();
+      final sub = c.listen(dayControllerProvider(today), (p, n) {});
+      final day = await c.read(dayControllerProvider(today).future);
+      final slot = day.meals[1]; // 12:30 Chicken Rice Bowl (upcoming at 09:30)
+      final replacement = mealSnapshotFromTemplate(
+        demoMealTemplates[3],
+        seedFoods,
+      );
+      await c
+          .read(dayControllerProvider(today).notifier)
+          .replaceMeal(slot.id, replacement);
+      await Future<void>.delayed(Duration.zero);
+      final updated = await c.read(dayControllerProvider(today).future);
+      final swapped = updated.meals.firstWhere((m) => m.id == slot.id);
+      check(swapped.time).equals(slot.time);
+      check(swapped.meal.name).equals('Salmon & Sweet Potato');
+      check(swapped.meal.anyChecked).isFalse();
+      sub.close();
+    });
+
+    test('on a FUTURE day detaches it (copy-on-write)', () async {
+      final c = container();
+      final sub = c.listen(dayControllerProvider(tomorrow), (p, n) {});
+      final preview = await c.read(dayControllerProvider(tomorrow).future);
+      check(await c.read(dayRepositoryProvider).getByDate(tomorrow)).isNull();
+      final slot = preview.meals.first;
+      final replacement = mealSnapshotFromTemplate(
+        demoMealTemplates[3],
+        seedFoods,
+      );
+      await c
+          .read(dayControllerProvider(tomorrow).notifier)
+          .replaceMeal(slot.id, replacement);
+      await Future<void>.delayed(Duration.zero);
+      check(
+        await c.read(dayRepositoryProvider).getByDate(tomorrow),
+      ).isNotNull();
+      // detached: a template edit no longer reaches this day (UC7)
+      await c
+          .read(planTemplateRepositoryProvider)
+          .save(demoPlanTemplate.copyWith(active: false));
+      await Future<void>.delayed(Duration.zero);
+      final after = await c.read(dayControllerProvider(tomorrow).future);
+      check(after.meals.length).equals(4); // snapshot, not a rest-day rebuild
+      check(
+        after.meals.firstWhere((m) => m.id == slot.id).meal.name,
+      ).equals('Salmon & Sweet Potato');
+      sub.close();
+    });
+
+    test('on a past day throws, writes nothing', () async {
+      final c = container();
+      final sub = c.listen(dayControllerProvider(yesterday), (p, n) {});
+      await c.read(dayControllerProvider(yesterday).future);
+      final replacement = mealSnapshotFromTemplate(
+        demoMealTemplates[0],
+        seedFoods,
+      );
+      await check(
+        c
+            .read(dayControllerProvider(yesterday).notifier)
+            .replaceMeal('whatever', replacement),
+      ).throws<StateError>();
+      check(await c.read(dayRepositoryProvider).getByDate(yesterday)).isNull();
+      sub.close();
+    });
+
+    test('guard: checked item → StateError (status not upcoming)', () async {
+      final c = container();
+      final sub = c.listen(dayControllerProvider(today), (p, n) {});
+      final day = await c.read(dayControllerProvider(today).future);
+      final id = day.meals[1].id; // lunch, upcoming at 09:30
+      await c.read(dayControllerProvider(today).notifier).checkItem(id, 0);
+      await Future<void>.delayed(Duration.zero);
+      final replacement = mealSnapshotFromTemplate(
+        demoMealTemplates[3],
+        seedFoods,
+      );
+      await check(
+        c
+            .read(dayControllerProvider(today).notifier)
+            .replaceMeal(id, replacement),
+      ).throws<StateError>();
+      sub.close();
+    });
+  });
 }

@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../domain/day/day.dart';
 import '../../../../domain/services/meal_lifecycle.dart';
 import '../../../../domain/services/meal_status.dart';
 import '../../../../domain/services/nutrition.dart';
 import '../../../../domain/shared/enums.dart';
+import '../../../core/formatting.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
@@ -19,9 +21,8 @@ import '../view_models/today_providers.dart';
 import 'day_strip.dart';
 import 'formatting.dart';
 import 'intake_card.dart';
-import 'meal_sheet.dart';
 import 'nudge_card.dart';
-import 'sheet_actions.dart';
+import '../../../core/widgets/sheet_actions.dart';
 import 'streak_chip.dart';
 
 /// The Today tab (S06 spec): appbar (date + greeting + calendar stub) ·
@@ -172,27 +173,22 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                           for (final i in meal.meal.items) i.food.name,
                         ],
                         status: status,
-                        onTap: selected.isAfter(today)
-                            ? null
-                            : () {
+                        onTap: () {
+                          if (isToday) {
+                            ref
+                                .read(intakeFreezeProvider.notifier)
+                                .freeze(consumedMacros(day));
+                          }
+                          context
+                              .push('/meal/${dayParam(selected)}/${meal.id}')
+                              .whenComplete(() {
                                 if (isToday) {
                                   ref
                                       .read(intakeFreezeProvider.notifier)
-                                      .freeze(consumedMacros(day));
+                                      .clear();
                                 }
-                                showMealSheet(
-                                  context,
-                                  date: selected,
-                                  mealId: meal.id,
-                                  readOnly: !isToday,
-                                ).whenComplete(() {
-                                  if (isToday) {
-                                    ref
-                                        .read(intakeFreezeProvider.notifier)
-                                        .clear();
-                                  }
-                                });
-                              },
+                              });
+                        },
                         onStatusTap: !isToday
                             ? null
                             : () {

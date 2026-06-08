@@ -1,5 +1,6 @@
 import 'package:crudo/config/di.dart';
 import 'package:crudo/data/services/id_generator.dart';
+import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/shared/enums.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -33,11 +34,15 @@ class FoodDraftController extends _$FoodDraftController {
 
   /// Mirrors the UI gate (SAVE disabled unless canSave) — reaching this
   /// with an invalid draft is a bug, not a user error.
-  Future<void> save() async {
+  ///
+  /// Returns the saved [Food] so callers can pop it as a route result.
+  Future<Food> save() async {
     final draft = state.requireValue;
     if (!draft.canSave) throw StateError('draft has validation issues');
     final id = foodId ?? ref.read(idGeneratorProvider).newId();
-    await ref.read(foodRepositoryProvider).save(draft.toFood(id));
+    final food = draft.toFood(id);
+    await ref.read(foodRepositoryProvider).save(food);
+    return food;
   }
 
   /// Unconditional in S07: nothing can reference a food before templates

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../domain/food/food.dart';
 import '../../../../domain/shared/enums.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
@@ -102,7 +103,8 @@ class _FoodFormState extends ConsumerState<_FoodForm> {
       );
       return;
     }
-    context.pop();
+    // Pop with the saved Food so picker callers receive it.
+    context.pop<Food?>(result is AsyncData ? result.value : null);
   }
 
   Future<void> _confirmDelete(String name) async {

@@ -1,4 +1,5 @@
-import 'package:crudo/domain/shared/meal_time.dart';
+export 'package:crudo/ui/core/formatting.dart'
+    show mealTimeLabel, timeOfDayLabel;
 
 const _weekdays = [
   'Monday',
@@ -23,13 +24,6 @@ const _months = [
   'November',
   'December',
 ];
-
-String _two(int n) => n.toString().padLeft(2, '0');
-
-String mealTimeLabel(MealTime t) => '${_two(t.hour)}:${_two(t.minute)}';
-
-String timeOfDayLabel(DateTime local) =>
-    '${_two(local.hour)}:${_two(local.minute)}';
 
 /// 'Thursday, June 4' — [dayLabel] is a UTC day-label (S02 convention).
 String dateHeadline(DateTime dayLabel) =>

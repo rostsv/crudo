@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/themes/colors.dart';
-import '../../../core/themes/dimensions.dart';
-import '../../../core/themes/typography.dart';
-import '../../../core/widgets/toast.dart';
+import '../themes/colors.dart';
+import '../themes/dimensions.dart';
+import '../themes/typography.dart';
+import 'toast.dart';
 
 /// Runs a day-controller op from a sheet, popping on success when [pop] is
 /// set. A StateError (domain guard rejection) surfaces as [guardMessage] in
@@ -46,14 +46,15 @@ class SecondaryAction extends StatelessWidget {
       child: GestureDetector(
         onTap: enabled ? onTap : null,
         child: Container(
+          width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-          alignment: Alignment.center,
           decoration: BoxDecoration(
             color: colors.surfaceLow,
             borderRadius: Radii.all(Radii.full),
           ),
           child: Text(
             label,
+            textAlign: TextAlign.center,
             style: CrudoText.body.copyWith(
               fontWeight: FontWeight.w700,
               color: colors.onSurface,

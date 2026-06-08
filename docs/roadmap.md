@@ -36,7 +36,7 @@ Status legend: ✅ done · ◻ not started.
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| ✅ | Plan logic + scheduling (S09) | logic | S02,S03 | Done `<pending>`. Pure-domain `plan_scheduling.dart`: cross-plan weekday-conflict detection + steal-override, ≥1-plan delete guard, uncovered-weekday detection, clone plan & meal; `selectPlanForDate` relocated from `meal_lifecycle` w/ export shim. snapshot-on-schedule + template-edits-future-only already shipped (S05/S06/S08). Spec+plan: `2026-06-08-s09-*`. |
+| ✅ | Plan logic + scheduling (S09) | logic | S02,S03 | Done `a49618c`. Pure-domain `plan_scheduling.dart`: cross-plan weekday-conflict detection + steal-override, ≥1-plan delete guard, uncovered-weekday detection, clone plan & meal; `selectPlanForDate` relocated from `meal_lifecycle` w/ export shim. snapshot-on-schedule + template-edits-future-only already shipped (S05/S06/S08). Spec+plan: `2026-06-08-s09-*`. |
 | S10 | Plans list + detail | ui | S04,S09 | read-only list, detail edit, weekday assign, conflict modal. |
 | S11 | Create-plan flow | ui | S04,S08,S09 | name/goal/weekdays/meal-picker, live macro preview, mid-flow add-meal with preserved draft. |
 

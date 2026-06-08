@@ -111,12 +111,12 @@ void main() {
 
 **Steps (TDD — here a verified refactor):**
 
-- [ ] 1. Create `plan_scheduling.dart` with the import + `selectPlanForDate` (verbatim from the contract).
-- [ ] 2. In `meal_lifecycle.dart`: delete the `selectPlanForDate` function + its doc comment; add `export 'plan_scheduling.dart' show selectPlanForDate;` after the imports.
-- [ ] 3. Create `plan_scheduling_test.dart` with the relocated group (contract above).
-- [ ] 4. In `meal_lifecycle_test.dart`: delete the `group('selectPlanForDate', …)` block (and any now-unused helper *only if* nothing else references it — `_plan()` is shared with `buildDayFromPlan`, so leave it).
-- [ ] 5. **Run — green (no regressions):** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart test/domain/services/meal_lifecycle_test.dart`. Both files pass; the moved group runs from its new home.
-- [ ] 6. Gates: `dart format .` · `flutter analyze` (confirm `day_controller.dart` still resolves `selectPlanForDate` via the export — no import edit needed) · `flutter test --timeout=90s`. Report for review.
+- [x] 1. Create `plan_scheduling.dart` with the import + `selectPlanForDate` (verbatim from the contract).
+- [x] 2. In `meal_lifecycle.dart`: delete the `selectPlanForDate` function + its doc comment; add `export 'plan_scheduling.dart' show selectPlanForDate;` after the imports.
+- [x] 3. Create `plan_scheduling_test.dart` with the relocated group (contract above).
+- [x] 4. In `meal_lifecycle_test.dart`: delete the `group('selectPlanForDate', …)` block (and any now-unused helper *only if* nothing else references it — `_plan()` is shared with `buildDayFromPlan`, so leave it).
+- [x] 5. **Run — green (no regressions):** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart test/domain/services/meal_lifecycle_test.dart`. Both files pass; the moved group runs from its new home.
+- [x] 6. Gates: `dart format .` · `flutter analyze` (confirm `day_controller.dart` still resolves `selectPlanForDate` via the export — no import edit needed) · `flutter test --timeout=90s`. Report for review.
 
 **Skills:** `.agents/skills/flutter-apply-architecture-best-practices` · `.agents/skills/dart-run-static-analysis`
 
@@ -195,7 +195,7 @@ bool _sameWeekdays(List<int> a, List<int> b) {
 
 **Steps (TDD):**
 
-- [ ] 1. **Failing tests** — append to `plan_scheduling_test.dart`:
+- [x] 1. **Failing tests** — append to `plan_scheduling_test.dart`:
 
 ```dart
   group('detectConflicts', () {
@@ -256,10 +256,10 @@ bool _sameWeekdays(List<int> a, List<int> b) {
   });
 ```
 
-- [ ] 2. **Run — red:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`. Expected: compile error / `detectConflicts` undefined.
-- [ ] 3. **Implement** — append the contract (typedef + `detectConflicts` + `applyOverride` + `_sameWeekdays`) to `plan_scheduling.dart`.
-- [ ] 4. **Run — green:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`.
-- [ ] 5. Gates: `dart format .` · `flutter analyze` · `flutter test --timeout=90s`. Report for review.
+- [x] 2. **Run — red:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`. Expected: compile error / `detectConflicts` undefined.
+- [x] 3. **Implement** — append the contract (typedef + `detectConflicts` + `applyOverride` + `_sameWeekdays`) to `plan_scheduling.dart`.
+- [x] 4. **Run — green:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`.
+- [x] 5. Gates: `dart format .` · `flutter analyze` · `flutter test --timeout=90s`. Report for review.
 
 **Skills:** `.agents/skills/dart-add-unit-test` · `.agents/skills/dart-use-pattern-matching` (record syntax) · `.agents/skills/dart-run-static-analysis`
 
@@ -299,7 +299,7 @@ List<int> uncoveredWeekdays(List<PlanTemplate> plans) {
 
 **Steps (TDD):**
 
-- [ ] 1. **Failing tests** — append:
+- [x] 1. **Failing tests** — append:
 
 ```dart
   group('canDeletePlan', () {
@@ -331,10 +331,10 @@ List<int> uncoveredWeekdays(List<PlanTemplate> plans) {
   });
 ```
 
-- [ ] 2. **Run — red:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`. Expected: `canDeletePlan` undefined.
-- [ ] 3. **Implement** — append the two functions to `plan_scheduling.dart`.
-- [ ] 4. **Run — green:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`.
-- [ ] 5. Gates: `dart format .` · `flutter analyze` · `flutter test --timeout=90s`. Report for review.
+- [x] 2. **Run — red:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`. Expected: `canDeletePlan` undefined.
+- [x] 3. **Implement** — append the two functions to `plan_scheduling.dart`.
+- [x] 4. **Run — green:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`.
+- [x] 5. Gates: `dart format .` · `flutter analyze` · `flutter test --timeout=90s`. Report for review.
 
 **Skills:** `.agents/skills/dart-add-unit-test` · `.agents/skills/dart-run-static-analysis`
 
@@ -389,7 +389,7 @@ MealTemplate cloneMeal(MealTemplate src, {required String Function() newId}) =>
 
 **Steps (TDD):**
 
-- [ ] 1. **Failing tests** — append (add `_SeqIds` helper near the top of the test file's helpers, plus imports `package:crudo/domain/meal/meal_template.dart`, `package:crudo/domain/food/food_ref.dart`, `package:crudo/domain/shared/enums.dart`, `package:crudo/domain/shared/grams.dart`). Verified shapes: `MealTime(int minutesOfDay)` is single-positional (480 = 08:00); `FoodRef.grams` is a `Grams` value object; `MealTag` values are `{breakfast, lunch, dinner, snack, preWorkout, postWorkout}`.
+- [x] 1. **Failing tests** — append (add `_SeqIds` helper near the top of the test file's helpers, plus imports `package:crudo/domain/meal/meal_template.dart`, `package:crudo/domain/food/food_ref.dart`, `package:crudo/domain/shared/enums.dart`, `package:crudo/domain/shared/grams.dart`). Verified shapes: `MealTime(int minutesOfDay)` is single-positional (480 = 08:00); `FoodRef.grams` is a `Grams` value object; `MealTag` values are `{breakfast, lunch, dinner, snack, preWorkout, postWorkout}`.
 
 ```dart
 class _SeqIds {
@@ -437,10 +437,10 @@ class _SeqIds {
   });
 ```
 
-- [ ] 2. **Run — red:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`. Expected: `clonePlan` undefined.
-- [ ] 3. **Implement** — append the two imports + two functions to `plan_scheduling.dart`.
-- [ ] 4. **Run — green:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`.
-- [ ] 5. Gates: `dart format .` · `flutter analyze` · `flutter test --timeout=90s`. Report for review.
+- [x] 2. **Run — red:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`. Expected: `clonePlan` undefined.
+- [x] 3. **Implement** — append the two imports + two functions to `plan_scheduling.dart`.
+- [x] 4. **Run — green:** `flutter test --timeout=90s test/domain/services/plan_scheduling_test.dart`.
+- [x] 5. Gates: `dart format .` · `flutter analyze` · `flutter test --timeout=90s`. Report for review.
 
 **Skills:** `.agents/skills/dart-add-unit-test` · `.agents/skills/flutter-apply-architecture-best-practices` · `.agents/skills/dart-run-static-analysis`
 

@@ -70,26 +70,6 @@ PlanTemplate _plan({
 
 void main() {
   final thursday = DateTime.utc(2026, 6, 4); // 2026-06-04 is a Thursday
-  final sunday = DateTime.utc(2026, 6, 7);
-
-  group('selectPlanForDate', () {
-    test('picks the active plan covering the weekday', () {
-      check(selectPlanForDate([_plan()], thursday)).isNotNull();
-    });
-    test('null when no plan covers the weekday (rest day)', () {
-      check(selectPlanForDate([_plan()], sunday)).isNull();
-    });
-    test('ignores inactive plans', () {
-      check(selectPlanForDate([_plan(active: false)], thursday)).isNull();
-    });
-    test('defensive tie-break: lowest id wins', () {
-      final picked = selectPlanForDate([
-        _plan(id: 'p2'),
-        _plan(id: 'p1'),
-      ], thursday);
-      check(picked!.id).equals('p1');
-    });
-  });
 
   group('buildDayFromPlan', () {
     Day build({PlanTemplate? plan}) => buildDayFromPlan(

@@ -11,6 +11,8 @@ import '../shared/macros.dart';
 import 'meal_status.dart';
 import 'nutrition.dart';
 
+export 'plan_scheduling.dart' show selectPlanForDate;
+
 /// Engine façade (S05): UI pre-check predicates. Every throwing Day op has a
 /// matching predicate — views consult these and never discover a guard by
 /// catching. Materialization + kcal live below (Task 6).
@@ -113,17 +115,6 @@ MealStatus mealStatus(Day day, String mealId, DateTime now) {
       ? computeGraceEnd(day, mealId, meal.snoozedUntil!)
       : now;
   return deriveMealStatus(meal, day.date, now, graceEnd);
-}
-
-/// The active plan covering [date]'s weekday (0=Mon…6=Sun). >1 match should
-/// be impossible (S09 blocks weekday conflicts) — defensively the lowest id
-/// wins, deterministically.
-PlanTemplate? selectPlanForDate(List<PlanTemplate> plans, DateTime date) {
-  final weekday = date.weekday - 1;
-  final matches =
-      plans.where((p) => p.active && p.days.contains(weekday)).toList()
-        ..sort((a, b) => a.id.compareTo(b.id));
-  return matches.isEmpty ? null : matches.first;
 }
 
 /// Resolves a meal template into a day-ready snapshot: each FoodRef becomes

@@ -24,11 +24,13 @@ flutter run --flavor dev  -t lib/main_development.dart --dart-define-from-file=c
 flutter run --flavor prod -t lib/main.dart            --dart-define-from-file=config/prod.json
 dart format .                                           # format (pre-commit checks this)
 flutter analyze                                         # lint + static analysis
-flutter test                                            # run all tests
-flutter test test/widget_test.dart                      # single test file
-flutter test --name "<substring>"                       # tests matching name
+flutter test --timeout=90s                              # run all tests — ALWAYS pass --timeout
+flutter test test/widget_test.dart --timeout=90s        # single test file
+flutter test --name "<substring>" --timeout=90s         # tests matching name
 dart run build_runner build                               # codegen: freezed (build_runner 2.15: no --delete-conflicting-outputs flag)
 ```
+
+**Test timeouts are mandatory.** A widget test with an infinite animation (`pumpAndSettle` on a repeating animation), an unclosed stream, or a never-settling provider hangs forever and stalls the whole run. **Always run `flutter test` with `--timeout=90s`** (per-test cap; cross-platform via the test package). For a deadlock the per-test cap can't catch (`build_runner`, `flutter pub get`, a hung process), add a wall-clock backstop: `gtimeout 600 <cmd>` (macOS: `brew install coreutils`; CI/Linux: plain `timeout 600 <cmd>`). When a test legitimately needs longer, mark that one test `@Timeout(Duration(minutes: 2))` — never raise the global cap to hide a hang.
 > `config/dev.json` / `config/prod.json` are gitignored — copy `config/example.json` and fill locally. The freezed codegen toolchain is installed (S02); run `dart run build_runner build` after touching any `@freezed` model. JSON codegen is deliberately absent — the domain is serialization-free; DTOs arrive in `data/` at S20.
 
 Environment: Dart SDK `^3.11.5`. Enable pre-commit hook once: `git config core.hooksPath .githooks`.

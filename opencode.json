@@ -13,7 +13,7 @@
 
   "agent": {
     "plan": {
-      "model": "opencode-go/qwen3.7-max",
+      "model": "opencode-go/deepseek-v4-pro",
       "prompt": "{file:./docs/workflow.md}"
     },
 
@@ -22,24 +22,24 @@
       "prompt": "{file:./.opencode/roles/ui.md}"
     },
 
-    "implement": {
+    "implement-flash": {
+      "model": "opencode-go/deepseek-v4-flash",
+      "prompt": "{file:./.opencode/roles/implement.md}"
+    },
+
+    "implement-kimi": {
       "model": "opencode-go/kimi-k2.6",
       "prompt": "{file:./.opencode/roles/implement.md}"
     },
 
-    "implement-free": {
-      "model": "opencode/minimax-m3-free",
-      "prompt": "{file:./.opencode/roles/implement.md}"
-    },
-
     "build": {
-      "model": "opencode/deepseek-v4-flash-free",
+      "model": "opencode-go/deepseek-v4-flash",
       "mode": "all",
       "prompt": "{file:./.opencode/roles/build.md}"
     },
 
     "review": {
-      "model": "opencode/nemotron-3-ultra-free",
+      "model": "opencode-go/deepseek-v4-pro",
       "permission": {
         "edit": {
           "**": "deny",
@@ -50,7 +50,7 @@
     },
 
     "escalate": {
-      "model": "opencode-go/qwen3.7-max",
+      "model": "opencode-go/deepseek-v4-pro",
       "mode": "all",
       "prompt": "{file:./.opencode/roles/escalate.md}"
     }

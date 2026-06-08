@@ -12,6 +12,7 @@ Flutter app, early implementation. `lib/main.dart` is still a placeholder (no pr
 - `docs/design/prototype/app.css` -- **locked color + type tokens (authoritative)**
 - `docs/design/prototype/screens/*.jsx` -- visual *sketch*: composition + fields to show; dimensions always snap to the design system (`design_system.md §5`)
 - `docs/workflow.md` -- the brainstorm→plan→delegate→review→integrate loop
+- `docs/authoring-plans.md` -- the `## Task <id>:` plan format the `/task` command executes
 
 **Resume protocol:** `git log` / `git status` → newest plan in `docs/plans/` → first unchecked task → its spec → skills → implement.
 

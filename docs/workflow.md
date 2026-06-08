@@ -8,7 +8,7 @@ How the human, Opus (Claude Code), and the opencode worker models collaborate to
 - **Opus (Claude Code) — architect / orchestrator** — facilitates brainstorming, writes specs and plans, decomposes work into per-task contracts, reviews and verifies diffs, integrates (commits), and keeps `AGENTS.md` + `docs/` the source of truth. Does not mass-produce feature code; it specs and reviews it.
 - **opencode workers** — execute one well-specified task each:
   - `ui` (kimi) — screens & widgets, pixel-matching the prototype.
-  - `implement` (minimax) — controllers, repositories, services, models, tests.
+  - `implement` — controllers, repositories, services, models, tests. Two model agents behind one logical role: `implement-flash` (deepseek, cheap — the `/task` default) and `implement-kimi` (kimi, stronger — `/task … kimi`).
   - `build` (deepseek) — boilerplate, codegen, test fill-in, mechanical fixups.
 - **review** — the `review` worker drafts compressed findings; **Opus verifies them and makes the call**. Review = review worker + Opus, together.
 
@@ -68,7 +68,7 @@ dart format · flutter analyze · custom_lint · flutter test · build_runner
   - **Acceptance** — the tests/behavior that prove it's done
   - **Out of scope** — so the worker stays in its lane
 
-**Plan conventions (Opus):** tool-agnostic header — **no** superpowers `REQUIRED SUB-SKILL` line (opencode lacks it); TDD steps with full real code, no placeholders; reference the `.agents/skills` each task names; **no per-task `git commit` step** — each task ends at "report for review," Opus integrates.
+**Plan conventions (Opus):** tool-agnostic header — **no** superpowers `REQUIRED SUB-SKILL` line (opencode lacks it); TDD steps with full real code, no placeholders; reference the `.agents/skills` each task names; **no per-task `git commit` step** — each task ends at "report for review," Opus integrates. **Exact task-block format** (the `## Task <id>:` shape the `/task` command parses, with required subheads): `docs/authoring-plans.md`.
 
 ## Quality gates
 
@@ -79,13 +79,13 @@ dart format · flutter analyze · custom_lint · flutter test · build_runner
 
 ## When to run the review worker
 
-The `review` worker (Nemotron-3-super — **free**, read-only, `.opencode/roles/review.md`) is independent of the kimi implementer (different family → catches more). Opus reviews every diff regardless; the pre-commit hook + tests catch mechanical issues.
+The `review` worker (deepseek-v4-pro, read-only, `.opencode/roles/review.md`) is a stronger, independent pass on the diff. Most independent when it follows `implement-kimi` (different family → catches more); against `implement-flash` it shares the deepseek family, so lean harder on Opus's own review there. Opus reviews every diff regardless; the pre-commit hook + tests catch mechanical issues.
 
-- Because it's free, **run it liberally on any non-trivial diff** — not just risky ones.
+- **Run on any non-trivial diff** — not just risky ones.
 - **Skip** only pure-trivial: boilerplate · scaffolding · theme tokens · formatting.
 - **Always run** for: domain logic (adherence/streak, snapshots, day-assignment, meal-marking) · auth/security · a whole-feature merge.
 
-**Sequence:** `implement` (kimi) finishes the plan → runs `@review` (nemotron) on the whole diff as its **last step** → fixes any `BLOCK` → reports. Then **Opus** does the final review + integrate (commit). Review is the last *worker* step; Opus is the last word.
+**Sequence:** the implement worker finishes the plan → runs `@review` (deepseek-v4-pro) on the whole diff as its **last step** → fixes any `BLOCK` → reports. Then **Opus** does the final review + integrate (commit). Review is the last *worker* step; Opus is the last word.
 - **Strict scope** (enforced by the role file): it reviews **only the given diff** vs its spec/skill/invariants; flags only correctness / spec / invariant / security issues; never refactors, re-architects, or raises lint the hook already covers. Output = `PASS` or a bounded `BLOCK` list. Feed it just `git diff` + the spec slice + the named skill — never the whole repo.
 
 ## caveman fit

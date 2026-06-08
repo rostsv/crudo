@@ -1,19 +1,19 @@
 ---
-description: Execute one task from the active plan (TDD, gates, report, escalation) — usage /task 1, /task 9a
-agent: implement
+description: Execute one task from the active plan (TDD, gates, report, escalation) — usage /task 1, /task 9a [plan-glob] [kimi]
+agent: implement-flash
 ---
 
 You are executing **one task** from a Crudo implementation plan. Do exactly that task — not the next one, not the whole plan.
 
 ## What to do
 
-Task selector: **$ARGUMENTS** (e.g. `1`, `9a`). The first token is the task id; an optional second token is a plan basename glob (else use the newest plan).
+Task selector: **$ARGUMENTS** (e.g. `1`, `9a`). The first token is the task id; an optional token is a plan basename glob (else use the newest plan). An optional `kimi` token (any position) routes `implement`-Role tasks to the stronger `implement-kimi` agent instead of the default cheap `implement-flash`.
 
 Active plan (newest unless overridden): **!`ls -t docs/plans/*.md | head -1`**
 
 1. Read, in order: `AGENTS.md` → your role file → the active plan above → the task's spec (named in the plan header) → every `.agents/skills/` skill the task lists. Do not skip the skills.
 2. Find the task block matching the selector (`## Task <id>:`). Read its **Role**, Files, Contract, Steps, Skills, Out of scope.
-3. **Role routing:** if the task's Role is **not** your own (`ui` or `build`), delegate the entire task to that subagent (`@ui` / `@build`) with this same instruction and the task id. Otherwise execute it yourself.
+3. **Role routing.** You run as `implement-flash` (cheap default). Map the task's **Role**: `ui` → delegate `@ui`; `build` → delegate `@build`; `implement` → execute inline yourself, **unless** the `kimi` token was passed → delegate `@implement-kimi`. Delegate with this same instruction + the task id. Plan Roles stay logical (`ui` / `implement` / `build`); the model agent is chosen here, never in the plan.
 4. Execute the task's Steps **in order, exactly as written** — TDD: failing test first, run it red, minimal implementation, run it green. The plan's code blocks are the contract — match the named types/signatures verbatim. Run `dart run build_runner build` after touching any `@freezed`/`@riverpod` file.
 5. Stay strictly in the task's scope. Respect its **Out of scope** list. Do not touch files other tasks own. Do not change architecture decisions or design tokens (`docs/design_system.md §5` — dimensions from tokens only).
 
@@ -52,7 +52,7 @@ Paste the actual command output — Opus reviews from this file, never from chat
 ## On error / stuck
 
 Work the problem, don't thrash:
-- **Test red after ~2 honest attempts**, or the contract doesn't compile against the real codebase → **stop editing**, hand off to `@escalate` (top model) with the failing output and what you tried. Do not delete or weaken the test to make it pass.
+- **Test red after ~2 honest attempts**, or the contract doesn't compile against the real codebase → **stop editing**, hand off to `@escalate` (escalation agent) with the failing output and what you tried. Do not delete or weaken the test to make it pass.
 - **Spec/plan looks wrong** (contract references a type/signature that doesn't exist, two tasks contradict, an invariant can't hold) → **do not invent a fix**. Stop, set report Status `blocked`, write the exact contradiction under "Needs Opus", and stop. This is an architect decision.
 - **Task needs something an earlier task should have produced but didn't** → report `blocked`, name the missing symbol/file. Do not stub it silently.
 - **A gate fails for a reason outside your diff** (pre-existing breakage) → report it under "Needs Opus", don't try to fix unrelated code.

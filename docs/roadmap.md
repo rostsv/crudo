@@ -30,7 +30,7 @@ Status legend: ✅ done · ◻ not started.
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
 | ✅ | Custom food + validation (S07) | logic+ui | S02,S03 | Done `23ff1b0`. ±10% kcal rule (input-time, no override field), custom-food form (Product\|Dish toggle, category chips, delete+confirm), food library list at `/foods` (search + grouping; reusable for the S08 picker). Spec: `2026-06-06-s07-*`. |
-| S08 | Meal editor | ui | S03,S04,S07 | meal detail route, instance editor (draft → `replaceMeal`), swap-from-library, add-ingredient → custom-food callback, CoW future-day detach. Spec+plan: `2026-06-07-s08-*`. |
+| ✅ | Meal editor (S08) | ui | S03,S04,S07 | Done `1abeecd`. Meal detail route, instance editor (draft → `replaceMeal`), swap-from-library, add-ingredient → custom-food callback, CoW future-day detach. Spec+plan: `2026-06-07-s08-*`. **Swap-sheet refinements** (tag grouping + sticky search) done `0c5047b`, plan `2026-06-08-s08-swap-sheet-refinements.md`. |
 
 ## Phase 3 — Plans
 

@@ -306,5 +306,161 @@ void main() {
       await open(tester, date: today, mealId: 'nonexistent');
       expect(find.byKey(const ValueKey('meal-gone')), findsOneWidget);
     });
+
+    // ── Swap sheet tag grouping + search (S08) ──────────────────────
+
+    testWidgets('swap: tag grouping visible for breakfast meal (sm-0)', (
+      tester,
+    ) async {
+      // Use a time before breakfast (8:00) so the meal is upcoming.
+      now = DateTime(2026, 6, 4, 7, 0);
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      await open(tester, date: today, mealId: 'sm-0');
+      // Drag to reveal the swap tile at the bottom.
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.pumpAndSettle();
+
+      // Section headers
+      expect(find.text('SAME TYPE'), findsOneWidget);
+      expect(find.text('OTHER MEALS'), findsOneWidget);
+
+      // Breakfast template (Protein Oats Bowl) — matches sm-0's breakfast tag
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-breakfast')),
+        findsOneWidget,
+      );
+      // Other templates present in OTHER MEALS section
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-lunch')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-snack')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-dinner')),
+        findsOneWidget,
+      );
+
+      // Partition ordering: breakfast under SAME TYPE, lunch under OTHER MEALS.
+      final sameType = tester.getTopLeft(find.text('SAME TYPE')).dy;
+      final otherMeals = tester.getTopLeft(find.text('OTHER MEALS')).dy;
+      final breakfast = tester
+          .getTopLeft(find.byKey(const ValueKey('swap-demo-meal-breakfast')))
+          .dy;
+      final lunch = tester
+          .getTopLeft(find.byKey(const ValueKey('swap-demo-meal-lunch')))
+          .dy;
+      expect(sameType, lessThan(breakfast));
+      expect(breakfast, lessThan(otherMeals));
+      expect(otherMeals, lessThan(lunch));
+    });
+
+    testWidgets('swap: grouping for snack meal (sm-2)', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      await open(tester, date: today, mealId: 'sm-2');
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.pumpAndSettle();
+
+      // sm-2 is snack-tagged → SAME TYPE section includes Yogurt & Banana
+      expect(find.text('SAME TYPE'), findsOneWidget);
+      expect(find.text('OTHER MEALS'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-snack')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('swap: search flattens sections; clear restores them', (
+      tester,
+    ) async {
+      // Use a time before breakfast (8:00) so sm-0 is upcoming.
+      now = DateTime(2026, 6, 4, 7, 0);
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      await open(tester, date: today, mealId: 'sm-0');
+      // Drag to reveal the swap tile at the bottom.
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.pumpAndSettle();
+
+      // Confirm sections visible before search
+      expect(find.text('SAME TYPE'), findsOneWidget);
+
+      // Type "chicken" to filter
+      await tester.enterText(
+        find.byKey(const ValueKey('swap-search')),
+        'chicken',
+      );
+      await tester.pumpAndSettle();
+
+      // Sections gone, only Chicken Rice Bowl visible
+      expect(find.text('SAME TYPE'), findsNothing);
+      expect(find.text('OTHER MEALS'), findsNothing);
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-lunch')),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-breakfast')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('swap-demo-meal-snack')), findsNothing);
+      expect(find.byKey(const ValueKey('swap-demo-meal-dinner')), findsNothing);
+
+      // Clear search → sections return
+      await tester.enterText(find.byKey(const ValueKey('swap-search')), '');
+      await tester.pumpAndSettle();
+
+      expect(find.text('SAME TYPE'), findsOneWidget);
+      expect(find.text('OTHER MEALS'), findsOneWidget);
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-breakfast')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('swap: search zero matches shows no rows', (tester) async {
+      // Use a time before breakfast (8:00) so sm-0 is upcoming.
+      now = DateTime(2026, 6, 4, 7, 0);
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      await open(tester, date: today, mealId: 'sm-0');
+      // Drag to reveal the swap tile at the bottom.
+      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.pumpAndSettle();
+
+      // Type a query that matches nothing
+      await tester.enterText(
+        find.byKey(const ValueKey('swap-search')),
+        'xyzzy',
+      );
+      await tester.pumpAndSettle();
+
+      // No templates visible
+      expect(
+        find.byKey(const ValueKey('swap-demo-meal-breakfast')),
+        findsNothing,
+      );
+      expect(find.byKey(const ValueKey('swap-demo-meal-lunch')), findsNothing);
+      expect(find.byKey(const ValueKey('swap-demo-meal-snack')), findsNothing);
+      expect(find.byKey(const ValueKey('swap-demo-meal-dinner')), findsNothing);
+      // Search field still present
+      expect(find.byKey(const ValueKey('swap-search')), findsOneWidget);
+    });
   });
 }

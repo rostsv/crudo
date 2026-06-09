@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../domain/food/food.dart';
 import '../../../../domain/food/food_ref.dart';
 import '../../../../domain/meal/food_snapshot.dart';
+import '../../../../domain/meal/meal_template.dart';
 import '../../../../domain/services/plan_scheduling.dart';
 import '../../../../domain/shared/enums.dart';
 import '../../../../domain/shared/grams.dart';
@@ -25,17 +26,23 @@ import 'grams_entry.dart';
 
 /// S11a library builder: create/edit a reusable [MealTemplate]. Draft-shaped,
 /// committed once via [MealTemplateDraftController.save]. Back: pristine pops
-/// silently, dirty asks "Discard changes?".
+/// silently, dirty asks "Discard changes?". If [seed] is provided (create-mode
+/// in-memory duplicate), the draft is pre-populated from it once.
 class MealTemplateBuilderScreen extends ConsumerWidget {
-  const MealTemplateBuilderScreen({required this.templateId, super.key});
+  const MealTemplateBuilderScreen({
+    required this.templateId,
+    this.seed,
+    super.key,
+  });
 
   final String? templateId; // null = create
+  final MealTemplate? seed; // create-mode in-memory seed
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final draft = ref.watch(mealTemplateDraftControllerProvider(templateId));
     return draft.when(
-      data: (d) => _BuilderForm(templateId: templateId, initial: d),
+      data: (d) => _BuilderForm(templateId: templateId, seed: seed, initial: d),
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
@@ -46,9 +53,14 @@ class MealTemplateBuilderScreen extends ConsumerWidget {
 }
 
 class _BuilderForm extends ConsumerStatefulWidget {
-  const _BuilderForm({required this.templateId, required this.initial});
+  const _BuilderForm({
+    required this.templateId,
+    this.seed,
+    required this.initial,
+  });
 
   final String? templateId;
+  final MealTemplate? seed; // create-mode in-memory seed
   final MealTemplateDraft initial;
 
   @override
@@ -56,7 +68,23 @@ class _BuilderForm extends ConsumerStatefulWidget {
 }
 
 class _BuilderFormState extends ConsumerState<_BuilderForm> {
-  late final _name = TextEditingController(text: widget.initial.name);
+  late final _name = TextEditingController(
+    text: widget.seed?.name ?? widget.initial.name,
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // Seed once: if we're in create mode with a seed, populate the draft.
+    if (widget.templateId == null && widget.seed != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref
+            .read(mealTemplateDraftControllerProvider(null).notifier)
+            .seedFrom(widget.seed!);
+      });
+    }
+  }
 
   @override
   void dispose() {

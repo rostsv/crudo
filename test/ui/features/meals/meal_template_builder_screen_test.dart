@@ -115,8 +115,10 @@ void main() {
         ),
         GoRoute(
           path: '/meal-templates/new',
-          builder: (context, state) =>
-              const MealTemplateBuilderScreen(templateId: null),
+          builder: (context, state) => MealTemplateBuilderScreen(
+            templateId: null,
+            seed: state.extra as MealTemplate?,
+          ),
           routes: [
             GoRoute(
               path: 'add-ingredient',
@@ -454,6 +456,152 @@ void main() {
       await t.tap(find.text('Discard'));
       await t.pumpAndSettle();
       expect(find.text('open-create'), findsOneWidget);
+    });
+  });
+
+  group('MealTemplateBuilderScreen — seed', () {
+    late MealTemplate seedMeal;
+
+    setUp(() {
+      seedMeal = MealTemplate(
+        id: 'seed-1',
+        name: 'X copy',
+        tags: [MealTag.lunch],
+        foods: [FoodRef(foodId: 'f1', grams: const Grams(150))],
+      );
+    });
+
+    /// Pumps the seed screen via a GoRouter. Extra carries the seed.
+    Future<ProviderContainer> pumpSeed(WidgetTester t) async {
+      final c = createContainer();
+      addTearDown(c.dispose);
+      t.view.physicalSize = const Size(800, 1800);
+      t.view.devicePixelRatio = 1.0;
+      addTearDown(t.view.resetPhysicalSize);
+      addTearDown(t.view.resetDevicePixelRatio);
+
+      final router = GoRouter(
+        initialLocation: '/',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const ValueKey('go-seed'),
+                  onPressed: () =>
+                      context.push('/meal-templates/new', extra: seedMeal),
+                  child: const Text('open-seed'),
+                ),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/meal-templates/new',
+            builder: (context, state) => MealTemplateBuilderScreen(
+              templateId: null,
+              seed: state.extra as MealTemplate?,
+            ),
+            routes: [
+              GoRoute(
+                path: 'add-ingredient',
+                builder: (context, state) => Scaffold(
+                  body: ElevatedButton(
+                    key: const ValueKey('fake-add-ingredient'),
+                    onPressed: () =>
+                        context.pop((food: food1, grams: const Grams(100))),
+                    child: const Text('add'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+
+      await t.pumpWidget(
+        UncontrolledProviderScope(
+          container: c,
+          child: MaterialApp.router(theme: crudoTheme, routerConfig: router),
+        ),
+      );
+      await t.pumpAndSettle();
+      // Navigate to the seed screen
+      await t.tap(find.byKey(const ValueKey('go-seed')));
+      await t.pumpAndSettle();
+      return c;
+    }
+
+    testWidgets(
+      'seed pre-populates name, tag, ingredient row; SAVE persists with minted id',
+      (t) async {
+        final c = await pumpSeed(t);
+
+        // Name field shows the seed name
+        final nameField = t.widget<TextField>(
+          find.byKey(const ValueKey('template-name')),
+        );
+        expect(nameField.controller?.text, 'X copy');
+
+        // Tag selected
+        final lunchPill = t.widget<Pill>(
+          find.byKey(const ValueKey('tag-lunch')),
+        );
+        check(lunchPill.selected).isTrue();
+
+        // Ingredient row present
+        expect(find.byKey(const ValueKey('ingredient-0')), findsOneWidget);
+        expect(find.textContaining('Chicken'), findsOneWidget);
+
+        // Macro preview shows kcal
+        final kcalText = t.widget<Text>(
+          find.byKey(const ValueKey('template-preview-kcal')),
+        );
+        expect(kcalText.data, contains('kcal'));
+
+        // SAVE is enabled
+        final btn = t.widget<TextButton>(
+          find.byKey(const ValueKey('save-meal')),
+        );
+        check(btn.onPressed).isNotNull();
+
+        // Tap SAVE
+        await t.tap(find.byKey(const ValueKey('save-meal')));
+        await t.pumpAndSettle();
+
+        // Popped back (or navigated — MaterialApp without router pops root)
+        // Verify repo has a template with the seed name but a different (minted) id
+        final repo = c.read(mealTemplateRepositoryProvider);
+        final all = await repo.getAll();
+        final saved = all.where((m) => m.name == 'X copy').toList();
+        check(saved).length.equals(1);
+        expect(saved.first.id, isNot('seed-1'));
+        check(saved.first.foods.length).equals(1);
+        check(saved.first.foods.first.foodId).equals('f1');
+        check(saved.first.foods.first.grams.value).equals(150);
+      },
+    );
+
+    testWidgets('cancel (back + discard) after seed — repo unchanged', (
+      t,
+    ) async {
+      final c = await pumpSeed(t);
+
+      // Tap back
+      await t.tap(find.byIcon(Icons.arrow_back));
+      await t.pumpAndSettle();
+
+      // Discard changes sheet shown (dirty after seed because isDirty is false? no modifications yet...
+      // But isDirty should be false right after seed since _initial is set correctly now)
+      // So pristine back should pop without confirm
+      expect(find.text('Discard changes?'), findsNothing);
+
+      // Template not persisted (repo has only the original seeded template)
+      final repo = c.read(mealTemplateRepositoryProvider);
+      final all = await repo.getAll();
+      check(all.where((m) => m.id == 'seed-1').toList()).isEmpty();
+      // Original templates still present
+      check(all.any((m) => m.id == 'mt1')).isTrue();
     });
   });
 }

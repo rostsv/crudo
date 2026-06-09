@@ -25,7 +25,7 @@ final class PlanDetailControllerProvider
   /// repo changes underneath (e.g. another screen mutates plans).
   PlanDetailControllerProvider._({
     required PlanDetailControllerFamily super.from,
-    required String super.argument,
+    required String? super.argument,
   }) : super(
          retry: null,
          name: r'planDetailControllerProvider',
@@ -60,7 +60,7 @@ final class PlanDetailControllerProvider
 }
 
 String _$planDetailControllerHash() =>
-    r'1bcf966ca0f6b205eee147668e5db795c3b17aca';
+    r'65988dee328ad7f4a6ce69cbe9c51540a03d896d';
 
 /// Manages the editable draft for one plan detail screen.
 /// Watches upstream stream providers so the draft auto-refreshes when the
@@ -73,7 +73,7 @@ final class PlanDetailControllerFamily extends $Family
           AsyncValue<PlanDraft>,
           PlanDraft,
           FutureOr<PlanDraft>,
-          String
+          String?
         > {
   PlanDetailControllerFamily._()
     : super(
@@ -88,7 +88,7 @@ final class PlanDetailControllerFamily extends $Family
   /// Watches upstream stream providers so the draft auto-refreshes when the
   /// repo changes underneath (e.g. another screen mutates plans).
 
-  PlanDetailControllerProvider call(String planId) =>
+  PlanDetailControllerProvider call(String? planId) =>
       PlanDetailControllerProvider._(argument: planId, from: this);
 
   @override
@@ -100,10 +100,10 @@ final class PlanDetailControllerFamily extends $Family
 /// repo changes underneath (e.g. another screen mutates plans).
 
 abstract class _$PlanDetailController extends $AsyncNotifier<PlanDraft> {
-  late final _$args = ref.$arg as String;
-  String get planId => _$args;
+  late final _$args = ref.$arg as String?;
+  String? get planId => _$args;
 
-  FutureOr<PlanDraft> build(String planId);
+  FutureOr<PlanDraft> build(String? planId);
   @$mustCallSuper
   @override
   void runBuild() {

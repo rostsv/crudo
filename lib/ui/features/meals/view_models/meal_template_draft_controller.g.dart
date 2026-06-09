@@ -54,7 +54,7 @@ final class MealTemplateDraftControllerProvider
 }
 
 String _$mealTemplateDraftControllerHash() =>
-    r'a154a5d7f8dc94f8a2ef8e4ba0a565fe631444ca';
+    r'321c76c7a0bff61dc7b4408b2671f13fff1e7ff0';
 
 final class MealTemplateDraftControllerFamily extends $Family
     with

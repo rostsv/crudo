@@ -1,4 +1,6 @@
+import 'package:checks/checks.dart';
 import 'package:crudo/domain/shared/enums.dart';
+import 'package:crudo/ui/core/widgets/primary_cta.dart';
 import 'package:crudo/ui/features/plans/view_models/plan_draft.dart';
 import 'package:crudo/ui/features/plans/view_models/plans_list.dart';
 import 'package:crudo/ui/features/plans/views/plan_list_card.dart';
@@ -45,6 +47,11 @@ void main() {
         GoRoute(
           path: '/plans',
           builder: (context, state) => const PlansScreen(),
+        ),
+        GoRoute(
+          path: '/plans/new',
+          builder: (context, state) =>
+              const Scaffold(body: Text('New Plan Form')),
         ),
         GoRoute(
           path: '/plans/:id',
@@ -99,6 +106,34 @@ void main() {
 
       expect(find.text('No plans yet'), findsOneWidget);
       expect(find.byType(PlanListCard), findsNothing);
+    });
+  });
+
+  group('PlansScreen — New plan CTA', () {
+    testWidgets('New plan button present with populated list', (tester) async {
+      await pumpScreen(tester, rows: [rowA]);
+
+      final cta = tester.widget<PrimaryCta>(
+        find.byKey(const ValueKey('new-plan')),
+      );
+      check(cta.label).equals('New plan');
+      check(cta.onPressed).isNotNull();
+    });
+
+    testWidgets('New plan button present in empty state', (tester) async {
+      await pumpScreen(tester, rows: const []);
+
+      expect(find.text('No plans yet'), findsOneWidget);
+      expect(find.byKey(const ValueKey('new-plan')), findsOneWidget);
+    });
+
+    testWidgets('tapping New plan navigates to /plans/new', (tester) async {
+      await pumpScreen(tester, rows: [rowA]);
+
+      await tester.tap(find.byKey(const ValueKey('new-plan')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New Plan Form'), findsOneWidget);
     });
   });
 }

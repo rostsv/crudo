@@ -56,6 +56,20 @@ class MealTemplateDraftController extends _$MealTemplateDraftController {
     return d.toTemplate(_initial.id) != _initial;
   }
 
+  /// Replace the blank create draft with one mirroring [src] (name/tags/foods).
+  /// id stays unminted: _initial keeps id '' so save() still mints on persist.
+  /// Updates _initial so isDirty is false right after seed (no spurious
+  /// "unsaved changes" on a freshly duplicated meal).
+  void seedFrom(MealTemplate src) {
+    _initial = MealTemplate(
+      id: '',
+      name: src.name,
+      tags: src.tags,
+      foods: src.foods,
+    );
+    state = AsyncData(MealTemplateDraft.from(src));
+  }
+
   void setName(String v) => _update((d) => d.withName(v));
   void toggleTag(MealTag t) => _update((d) => d.toggleTag(t));
   void addFood(FoodRef r) => _update((d) => d.addFood(r));

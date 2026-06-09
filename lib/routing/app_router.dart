@@ -11,6 +11,8 @@ import 'package:crudo/ui/features/meals/views/meal_detail_screen.dart';
 import 'package:crudo/ui/features/meals/views/meal_editor_screen.dart';
 import 'package:crudo/ui/features/meals/views/meal_template_builder_screen.dart';
 import 'package:crudo/ui/features/meals/views/meal_template_library_screen.dart';
+import 'package:crudo/domain/meal/meal_template.dart';
+import 'package:crudo/domain/plan/plan_template.dart';
 import 'package:crudo/ui/features/plans/views/plan_detail_screen.dart';
 import 'package:crudo/ui/features/plans/views/plans_screen.dart';
 import 'package:crudo/ui/features/profile/views/profile_screen.dart';
@@ -80,6 +82,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // S11: plan create — pushed over the shell. [seed] passed via extra.
+      GoRoute(
+        path: '/plans/new',
+        builder: (context, state) =>
+            PlanDetailScreen(planId: null, seed: state.extra as PlanTemplate?),
+      ),
+
       // S10: plan detail / editing — pushed over the shell.
       GoRoute(
         path: '/plans/:id',
@@ -119,10 +128,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
 
       // S11a: meal-template builder (library create/edit) — pushed over the shell.
+      // [seed] is an optional in-memory MealTemplate duplicate (via state.extra).
       GoRoute(
         path: '/meal-templates/new',
-        builder: (context, state) =>
-            const MealTemplateBuilderScreen(templateId: null),
+        builder: (context, state) => MealTemplateBuilderScreen(
+          templateId: null,
+          seed: state.extra as MealTemplate?,
+        ),
         routes: [
           GoRoute(
             path: 'add-ingredient',

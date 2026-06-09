@@ -4,7 +4,6 @@ import 'package:crudo/config/di.dart';
 import 'package:crudo/data/services/id_generator.dart';
 import 'package:crudo/data/services/seed_service.dart';
 import 'package:crudo/domain/food/food.dart';
-import 'package:crudo/domain/meal/food_snapshot.dart';
 import 'package:crudo/domain/shared/grams.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
 import 'package:crudo/ui/features/foods/views/food_form_screen.dart';
@@ -22,7 +21,7 @@ void main() {
   late List<Food> seedFoods;
   setUpAll(() async => seedFoods = await SeedService().loadFoods());
 
-  FoodSnapshot? capturedSnap;
+  ({Food food, Grams grams})? capturedResult;
 
   ProviderContainer container() {
     final c = ProviderContainer(
@@ -39,7 +38,7 @@ void main() {
   /// Harness: launcher at '/' that pushes '/add' → AddIngredientScreen;
   /// '/foods/new' → real FoodFormScreen (for custom-food round-trip).
   Widget app(ProviderContainer c) {
-    capturedSnap = null;
+    capturedResult = null;
     final router = GoRouter(
       initialLocation: '/',
       routes: [
@@ -49,8 +48,10 @@ void main() {
             body: Center(
               child: ElevatedButton(
                 onPressed: () async {
-                  final snap = await context.push<FoodSnapshot>('/add');
-                  capturedSnap = snap;
+                  final result = await context.push<({Food food, Grams grams})>(
+                    '/add',
+                  );
+                  capturedResult = result;
                 },
                 child: const Text('open'),
               ),
@@ -160,9 +161,9 @@ void main() {
     await t.tap(find.byKey(const ValueKey('add-to-meal')));
     await t.pumpAndSettle();
 
-    check(capturedSnap).isNotNull();
-    check(capturedSnap!.grams).equals(const Grams(150));
-    check(capturedSnap!.sourceFoodId).equals(chicken.id);
+    check(capturedResult).isNotNull();
+    check(capturedResult!.food.id).equals(chicken.id);
+    check(capturedResult!.grams).equals(const Grams(150));
   });
 
   testWidgets('back from stage 2 returns to stage 1', (t) async {
@@ -216,13 +217,13 @@ void main() {
       );
       expect(inputWidget.controller?.text, equals('100'));
 
-      // Add to meal → FoodSnapshot with the new food's id
+      // Add to meal → record with the new food's name
       await t.tap(find.byKey(const ValueKey('add-to-meal')));
       await t.pumpAndSettle();
 
-      check(capturedSnap).isNotNull();
-      check(capturedSnap!.name).equals('My blend');
-      check(capturedSnap!.grams).equals(const Grams(100));
+      check(capturedResult).isNotNull();
+      check(capturedResult!.food.name).equals('My blend');
+      check(capturedResult!.grams).equals(const Grams(100));
     },
   );
 

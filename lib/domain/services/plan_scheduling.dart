@@ -111,3 +111,35 @@ MealTemplate cloneMeal(MealTemplate src, {required String Function() newId}) =>
       tags: [...src.tags],
       foods: [...src.foods],
     );
+
+/// Reference accounting for a library meal template.
+/// [using]      — plans with ≥1 slot whose mealTemplateId == templateId.
+/// [wouldEmpty] — subset of [using] left with zero slots after every slot
+///                referencing templateId is removed (the template is the
+///                plan's only meal). Drives the delete block.
+typedef TemplateUsage = ({
+  List<PlanTemplate> using,
+  List<PlanTemplate> wouldEmpty,
+});
+
+TemplateUsage templateUsage(List<PlanTemplate> plans, String templateId) {
+  final using = <PlanTemplate>[];
+  final wouldEmpty = <PlanTemplate>[];
+  for (final p in plans) {
+    final refs = p.slots.where((s) => s.mealTemplateId == templateId).length;
+    if (refs == 0) continue;
+    using.add(p);
+    if (refs == p.slots.length) wouldEmpty.add(p);
+  }
+  return (using: using, wouldEmpty: wouldEmpty);
+}
+
+/// The plan with every slot referencing [templateId] removed (order + other
+/// fields preserved). Used for the cascade-strip write.
+PlanTemplate stripTemplateFromPlan(PlanTemplate p, String templateId) =>
+    p.copyWith(
+      slots: [
+        for (final s in p.slots)
+          if (s.mealTemplateId != templateId) s,
+      ],
+    );

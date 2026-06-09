@@ -4,7 +4,6 @@ import 'package:crudo/config/di.dart';
 import 'package:crudo/data/services/id_generator.dart';
 import 'package:crudo/data/services/seed_service.dart';
 import 'package:crudo/domain/food/food.dart';
-import 'package:crudo/domain/meal/food_snapshot.dart';
 import 'package:crudo/domain/shared/grams.dart';
 import 'package:crudo/ui/core/formatting.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
@@ -49,11 +48,10 @@ void main() {
     return c;
   }
 
-  // fakeSnap is computed lazily after seedFoods is loaded.
-  FoodSnapshot fakeSnap() => FoodSnapshot.from(
-    seedFoods.firstWhere((f) => f.name == 'Chicken breast'),
-    const Grams(80),
-  );
+  ({Food food, Grams grams}) fakeResult() {
+    final food = seedFoods.firstWhere((f) => f.name == 'Chicken breast');
+    return (food: food, grams: const Grams(80));
+  }
 
   /// GoRouter harness: '/' → launcher; '/meal/:date/:mealId/edit' → MealEditorScreen;
   /// '/meal/:date/:mealId/edit/add-ingredient' → fake that pops the known snapshot.
@@ -85,7 +83,7 @@ void main() {
               builder: (context, state) => Scaffold(
                 body: ElevatedButton(
                   key: const ValueKey('fake-add-ingredient'),
-                  onPressed: () => context.pop(fakeSnap()),
+                  onPressed: () => context.pop(fakeResult()),
                   child: const Text('add'),
                 ),
               ),

@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../domain/food/food.dart';
+import '../../../../domain/food/food_ref.dart';
 import '../../../../domain/meal/food_snapshot.dart';
+import '../../../../domain/services/plan_scheduling.dart';
 import '../../../../domain/shared/enums.dart';
 import '../../../../domain/shared/grams.dart';
-import '../../../core/formatting.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/input_decoration.dart';
@@ -14,27 +15,27 @@ import '../../../core/themes/typography.dart';
 import '../../../core/widgets/pill.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
+import '../../../core/widgets/sheet_actions.dart';
 import '../../../core/widgets/toast.dart';
 import '../../today/view_models/today_providers.dart';
-import '../view_models/meal_draft.dart';
-import '../view_models/meal_draft_controller.dart';
+import '../view_models/meal_template_draft.dart';
+import '../view_models/meal_template_draft_controller.dart';
 import 'formatting.dart';
 import 'grams_entry.dart';
 
-/// S08 instance editor: draft-shaped (name/tags/items), committed ONCE via
-/// MealDraftController.save → replaceMeal. Back: pristine pops silently,
-/// dirty asks "Discard changes?".
-class MealEditorScreen extends ConsumerWidget {
-  const MealEditorScreen({required this.date, required this.mealId, super.key});
+/// S11a library builder: create/edit a reusable [MealTemplate]. Draft-shaped,
+/// committed once via [MealTemplateDraftController.save]. Back: pristine pops
+/// silently, dirty asks "Discard changes?".
+class MealTemplateBuilderScreen extends ConsumerWidget {
+  const MealTemplateBuilderScreen({required this.templateId, super.key});
 
-  final DateTime date;
-  final String mealId;
+  final String? templateId; // null = create
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final draft = ref.watch(mealDraftControllerProvider(date, mealId));
+    final draft = ref.watch(mealTemplateDraftControllerProvider(templateId));
     return draft.when(
-      data: (d) => _EditorForm(date: date, mealId: mealId, initial: d),
+      data: (d) => _BuilderForm(templateId: templateId, initial: d),
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (e, _) => Scaffold(
@@ -44,22 +45,17 @@ class MealEditorScreen extends ConsumerWidget {
   }
 }
 
-class _EditorForm extends ConsumerStatefulWidget {
-  const _EditorForm({
-    required this.date,
-    required this.mealId,
-    required this.initial,
-  });
+class _BuilderForm extends ConsumerStatefulWidget {
+  const _BuilderForm({required this.templateId, required this.initial});
 
-  final DateTime date;
-  final String mealId;
-  final MealDraft initial;
+  final String? templateId;
+  final MealTemplateDraft initial;
 
   @override
-  ConsumerState<_EditorForm> createState() => _EditorFormState();
+  ConsumerState<_BuilderForm> createState() => _BuilderFormState();
 }
 
-class _EditorFormState extends ConsumerState<_EditorForm> {
+class _BuilderFormState extends ConsumerState<_BuilderForm> {
   late final _name = TextEditingController(text: widget.initial.name);
 
   @override
@@ -68,32 +64,15 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
     super.dispose();
   }
 
-  MealDraftController get _ctrl => ref.read(
-    mealDraftControllerProvider(widget.date, widget.mealId).notifier,
-  );
+  MealTemplateDraftController get _ctrl =>
+      ref.read(mealTemplateDraftControllerProvider(widget.templateId).notifier);
 
   Future<void> _save() async {
-    // Detach pre-check BEFORE the op: first persist of a future day = detach.
-    final today = ref.read(todayProvider);
-    final detaches =
-        widget.date.isAfter(today) &&
-        ref.read(persistedDayProvider(widget.date)).value == null;
-    final result = await AsyncValue.guard(_ctrl.save);
+    final saved = await _ctrl.save();
     if (!mounted) return;
-    if (result is AsyncError) {
-      showCrudoToast(
-        context,
-        "That can't be changed anymore.",
-        kind: ToastKind.warn,
-      );
-      return;
-    }
-    if (detaches) showCrudoToast(context, detachToastMessage);
-    context.pop();
+    context.pop(saved);
   }
 
-  /// Back handler (header button + system pop via PopScope): pristine pops,
-  /// dirty confirms.
   Future<void> _maybePop() async {
     if (!_ctrl.isDirty) {
       context.pop();
@@ -131,25 +110,110 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
 
   Future<void> _addIngredient() async {
     final r = await context.push<({Food food, Grams grams})>(
-      '/meal/${dayParam(widget.date)}/${widget.mealId}/edit/add-ingredient',
+      '/meal-templates/${widget.templateId ?? 'new'}/add-ingredient',
     );
-    if (r != null) _ctrl.addItem(FoodSnapshot.from(r.food, r.grams));
+    if (r != null) {
+      _ctrl.addFood(FoodRef(foodId: r.food.id, grams: r.grams));
+    }
   }
 
-  Future<void> _editGrams(int index, FoodSnapshot item) async {
+  Future<void> _editGrams(int index, FoodRef foodRef) async {
+    final foodsById = _ctrl.foodsById;
+    final food = foodsById[foodRef.foodId];
+    if (food == null) return;
+    final snapshot = FoodSnapshot.from(food, foodRef.grams);
     final g = await showCrudoSheet<Grams>(
       context,
-      builder: (_) => GramsSheet(item: item),
+      builder: (_) => GramsSheet(item: snapshot),
     );
-    if (g != null) _ctrl.setItemGrams(index, g);
+    if (g != null) _ctrl.setGrams(index, g);
+  }
+
+  Future<void> _delete() async {
+    var out = await _ctrl.delete();
+    if (!mounted) return;
+    if (out.blockedByEmpty) {
+      final names = out.affected.map((p) => p.name).join(', ');
+      showCrudoToast(
+        context,
+        "This is the only meal in $names — add another meal or delete that plan first.",
+        kind: ToastKind.warn,
+      );
+      return;
+    }
+    if (!out.deleted && out.affected.isNotEmpty) {
+      final names = out.affected.map((p) => p.name).join(', ');
+      final ok = await showCrudoSheet<bool>(
+        context,
+        builder: (sheetCtx) => SheetScaffold(
+          title: 'Delete meal?',
+          body: Text('$names will lose this meal.', style: CrudoText.body),
+          cta: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PrimaryCta(
+                label: 'Delete',
+                onPressed: () => Navigator.of(sheetCtx).pop(true),
+              ),
+              const SizedBox(height: Spacing.sm),
+              SecondaryAction(
+                label: 'Cancel',
+                onTap: () => Navigator.of(sheetCtx).pop(false),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (ok != true) return;
+      out = await _ctrl.delete(confirmed: true);
+    } else if (!out.deleted) {
+      final ok = await showCrudoSheet<bool>(
+        context,
+        builder: (sheetCtx) => SheetScaffold(
+          title: 'Delete meal?',
+          body: Text(
+            'This meal will be removed from your library.',
+            style: CrudoText.body,
+          ),
+          cta: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              PrimaryCta(
+                label: 'Delete',
+                onPressed: () => Navigator.of(sheetCtx).pop(true),
+              ),
+              const SizedBox(height: Spacing.sm),
+              SecondaryAction(
+                label: 'Cancel',
+                onTap: () => Navigator.of(sheetCtx).pop(false),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (ok != true) return;
+      out = await _ctrl.delete(confirmed: true);
+    }
+    if (out.deleted && mounted) context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
     final draft = ref
-        .watch(mealDraftControllerProvider(widget.date, widget.mealId))
+        .watch(mealTemplateDraftControllerProvider(widget.templateId))
         .requireValue;
+
+    // Usage badge for edit mode
+    final usedInPlans = widget.templateId != null
+        ? templateUsage(
+            ref.watch(planTemplatesProvider).value ?? const [],
+            widget.templateId!,
+          ).using.length
+        : 0;
+
+    final macros = draft.macros(_ctrl.foodsById);
+
     return PopScope(
       canPop: !_ctrl.isDirty,
       onPopInvokedWithResult: (didPop, _) {
@@ -160,7 +224,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
         body: SafeArea(
           child: Column(
             children: [
-              // Header: back · 'Edit meal' · SAVE.
+              // Header: back · title · SAVE.
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   Spacing.md,
@@ -178,8 +242,23 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                         color: colors.onSurface,
                       ),
                     ),
-                    const Expanded(
-                      child: Text('Edit meal', style: CrudoText.headlineSm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            draft.name.isEmpty ? 'New meal' : draft.name,
+                            style: CrudoText.headlineSm,
+                          ),
+                          if (usedInPlans > 0)
+                            Text(
+                              'Used in $usedInPlans plan${usedInPlans == 1 ? '' : 's'}',
+                              style: CrudoText.labelMd.copyWith(
+                                color: colors.onSurfaceMut,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                     Opacity(
                       opacity: draft.canSave ? 1 : Opacities.disabled,
@@ -217,7 +296,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                           const Text('MEAL NAME', style: CrudoText.label),
                           const SizedBox(height: Spacing.sm),
                           TextField(
-                            key: const ValueKey('meal-name'),
+                            key: const ValueKey('template-name'),
                             controller: _name,
                             style: CrudoText.headline,
                             decoration: softInputDecoration(
@@ -279,13 +358,13 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                                 ),
                               ),
                               Text(
-                                '${draft.items.length} ITEMS',
+                                '${draft.foods.length} ITEMS',
                                 style: CrudoText.label,
                               ),
                             ],
                           ),
                           const SizedBox(height: Spacing.md),
-                          if (draft.items.isEmpty)
+                          if (draft.foods.isEmpty)
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 vertical: Spacing.md,
@@ -293,7 +372,7 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                               child: Center(
                                 child: Text(
                                   'No ingredients yet',
-                                  key: const ValueKey('editor-empty'),
+                                  key: const ValueKey('template-empty'),
                                   style: CrudoText.body.copyWith(
                                     color: colors.onSurfaceMut,
                                   ),
@@ -301,13 +380,14 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                               ),
                             )
                           else
-                            for (final (i, item) in draft.items.indexed)
+                            for (final (i, row)
+                                in draft.rows(_ctrl.foodsById).indexed)
                               _IngredientRow(
                                 key: ValueKey('ingredient-$i'),
-                                item: item,
+                                row: row,
                                 colors: colors,
-                                onTap: () => _editGrams(i, item),
-                                onRemove: () => _ctrl.removeItem(i),
+                                onTap: () => _editGrams(i, draft.foods[i]),
+                                onRemove: () => _ctrl.removeFood(i),
                               ),
                           const SizedBox(height: Spacing.sm),
                           Semantics(
@@ -379,17 +459,17 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  '${draft.macros.kcal.round()} kcal',
-                                  key: const ValueKey('editor-preview-kcal'),
+                                  '${macros.kcal.round()} kcal',
+                                  key: const ValueKey('template-preview-kcal'),
                                   style: CrudoText.displaySm.copyWith(
                                     color: colors.surfaceLowest,
                                   ),
                                 ),
                               ),
                               Text(
-                                'P ${draft.macros.protein.round()}g'
-                                '  C ${draft.macros.carbs.round()}g'
-                                '  F ${draft.macros.fats.round()}g',
+                                'P ${macros.protein.round()}g'
+                                '  C ${macros.carbs.round()}g'
+                                '  F ${macros.fats.round()}g',
                                 style: CrudoText.body.copyWith(
                                   color: colors.surfaceLowest,
                                   fontWeight: FontWeight.w600,
@@ -400,6 +480,18 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
                         ],
                       ),
                     ),
+                    const SizedBox(height: Spacing.lg),
+                    // DELETE (edit only)
+                    if (widget.templateId != null)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Spacing.sm,
+                        ),
+                        child: SecondaryAction(
+                          label: 'Delete meal',
+                          onTap: _delete,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -413,14 +505,14 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
 
 class _IngredientRow extends StatelessWidget {
   const _IngredientRow({
-    required this.item,
+    required this.row,
     required this.colors,
     required this.onTap,
     required this.onRemove,
     super.key,
   });
 
-  final FoodSnapshot item;
+  final IngredientRowVm row;
   final CrudoColors colors;
   final VoidCallback onTap;
   final VoidCallback onRemove;
@@ -429,7 +521,7 @@ class _IngredientRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
-      label: 'Edit ${item.name} quantity',
+      label: 'Edit ${row.name} quantity',
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
@@ -447,15 +539,15 @@ class _IngredientRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      item.name,
+                      row.name,
                       style: CrudoText.body.copyWith(
                         fontWeight: FontWeight.w600,
                         color: colors.onSurface,
                       ),
                     ),
                     Text(
-                      '${gramsText(item.grams.value)}g ·'
-                      ' ${item.kcal.round()} kcal',
+                      '${gramsText(row.grams.value)}g ·'
+                      ' ${row.kcal} kcal',
                       style: CrudoText.body.copyWith(
                         color: colors.onSurfaceMut,
                       ),
@@ -464,7 +556,7 @@ class _IngredientRow extends StatelessWidget {
                 ),
               ),
               IconButton(
-                key: ValueKey('remove-${item.name}'),
+                key: ValueKey('remove-${row.name}'),
                 onPressed: onRemove,
                 icon: Icon(
                   Icons.close,

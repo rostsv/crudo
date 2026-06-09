@@ -148,7 +148,7 @@ class _AddIngredientScreenState extends ConsumerState<AddIngredientScreen> {
                   label: 'Add to Meal',
                   enabled: _grams != null && _grams! > 0,
                   onPressed: () =>
-                      context.pop(FoodSnapshot.from(picked, Grams(_grams!))),
+                      context.pop((food: picked, grams: Grams(_grams!))),
                 ),
               ),
             ),

@@ -60,7 +60,7 @@ final class PlanDetailControllerProvider
 }
 
 String _$planDetailControllerHash() =>
-    r'ad55dd290ae51565dd1b0d5f2228c1575b162bcb';
+    r'1bcf966ca0f6b205eee147668e5db795c3b17aca';
 
 /// Manages the editable draft for one plan detail screen.
 /// Watches upstream stream providers so the draft auto-refreshes when the

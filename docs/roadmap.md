@@ -45,7 +45,7 @@ Status legend: ✅ done · ◻ not started.
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| S12 | Adherence + streak engine | logic | S02,S05 | 3-state day, threshold, +1/hold/reset, personal best, milestones. |
+| ✅ | Adherence + streak engine (S12) | logic | S02,S05 | Done `82e00b8` (518 green). Pure `domain/services/adherence.dart`: `dayAdherence` (consumed÷planned kcal, clamped; never `dailyKcalTarget`), `classifyDayState` (green ≥threshold / red <50 / yellow), `lockDay` freeze of the Day trio (idempotent), `frozenDayState` (re-derives from stored `thresholdUsed` → history never recolors on prefs change). `advanceStreak` fold: green +1 / yellow+planned-0 hold / red reset, personalBest high-water, `lastCountedDay` idempotency guard, one-shot milestone events {7,30,100}. `catchUp`: locks every elapsed day (persisted-open locked in place, unopened back-materialized = red = reset, already-locked folded not re-saved), first-run seeds `lastCountedDay`. Thin `StreakCatchUp` controller fires on Today rollover/open + persists (only non-pure code); trigger-wiring + UI → S13. Review caught a spec bug (lock persisted-open in place, not rebuild) + 7 coverage holes pre-merge. Spec+plan: `2026-06-10-s12-*`. |
 | S13 | History + Calendar | ui | S04,S12 | streak card, weekly bar, per-day breakdown, calendar sheet. |
 
 ## Phase 5 — System

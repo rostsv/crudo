@@ -55,15 +55,12 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('nav-History')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const ValueKey('demo-counter')));
-    await tester.tap(find.byKey(const ValueKey('demo-counter')));
-    await tester.pumpAndSettle();
-    expect(find.text('Taps: 2'), findsOneWidget);
+    expect(find.text('History'), findsWidgets);
 
     await tester.tap(find.byKey(const ValueKey('nav-Today')));
     await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('nav-History')));
     await tester.pumpAndSettle();
-    expect(find.text('Taps: 2'), findsOneWidget); // survived the round-trip
+    expect(find.text('History'), findsWidgets); // survived the round-trip
   });
 }

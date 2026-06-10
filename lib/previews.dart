@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'domain/food/food.dart';
 import 'domain/meal/food_snapshot.dart';
@@ -19,6 +20,8 @@ import 'ui/core/widgets/toast.dart';
 import 'ui/features/foods/views/food_row.dart';
 import 'ui/features/foods/views/kcal_card.dart';
 import 'ui/features/foods/views/macro_field.dart';
+import 'ui/features/history/view_models/history_providers.dart';
+import 'ui/features/history/views/calendar_sheet.dart';
 import 'ui/features/meals/views/grams_entry.dart';
 import 'ui/features/today/views/day_strip.dart';
 import 'ui/features/today/views/intake_card.dart';
@@ -145,6 +148,24 @@ class _PreviewHome extends StatelessWidget {
                   label: 'Preview',
                   title: 'Demo',
                   body: Center(child: Text('Sheet content')),
+                ),
+              ),
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('CalendarSheet', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            PrimaryCta(
+              label: 'Open calendar',
+              onPressed: () => showCrudoSheet<void>(
+                context,
+                builder: (_) => ProviderScope(
+                  overrides: [
+                    monthGridProvider(
+                      DateTime.utc(2026, 6, 1),
+                    ).overrideWith((ref) => Future.value(_previewGrid())),
+                  ],
+                  child: const CalendarSheet(),
                 ),
               ),
             ),
@@ -321,6 +342,153 @@ class _PreviewHome extends StatelessWidget {
       ),
     );
   }
+}
+
+List<CalendarCell?> _previewGrid() {
+  CalendarCell? cell(
+    DateTime date, {
+    DayState? state,
+    required DayCellKind kind,
+    int done = 0,
+    int total = 0,
+    int kcal = 0,
+    int adherencePct = 0,
+  }) {
+    return (
+      date: date,
+      state: state,
+      kind: kind,
+      done: done,
+      total: total,
+      kcal: kcal,
+      adherencePct: adherencePct,
+    );
+  }
+
+  final result = <CalendarCell?>[];
+  // Week 1 (June 1-7)
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 1),
+      state: DayState.green,
+      kind: DayCellKind.locked,
+      done: 2,
+      total: 2,
+      kcal: 500,
+      adherencePct: 100,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 2),
+      state: DayState.yellow,
+      kind: DayCellKind.locked,
+      done: 1,
+      total: 2,
+      kcal: 300,
+      adherencePct: 60,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 3),
+      state: DayState.red,
+      kind: DayCellKind.locked,
+      done: 0,
+      total: 2,
+      kcal: 0,
+      adherencePct: 0,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 4),
+      state: DayState.green,
+      kind: DayCellKind.locked,
+      done: 3,
+      total: 3,
+      kcal: 800,
+      adherencePct: 100,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 5),
+      state: DayState.green,
+      kind: DayCellKind.locked,
+      done: 2,
+      total: 2,
+      kcal: 500,
+      adherencePct: 100,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 6),
+      state: DayState.yellow,
+      kind: DayCellKind.locked,
+      done: 1,
+      total: 2,
+      kcal: 300,
+      adherencePct: 60,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 7),
+      state: DayState.red,
+      kind: DayCellKind.locked,
+      done: 0,
+      total: 2,
+      kcal: 0,
+      adherencePct: 0,
+    ),
+  );
+  // Week 2 (June 8-14)
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 8),
+      state: DayState.green,
+      kind: DayCellKind.locked,
+      done: 2,
+      total: 2,
+      kcal: 500,
+      adherencePct: 100,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 9),
+      state: DayState.green,
+      kind: DayCellKind.locked,
+      done: 2,
+      total: 2,
+      kcal: 500,
+      adherencePct: 100,
+    ),
+  );
+  result.add(
+    cell(
+      DateTime.utc(2026, 6, 10),
+      state: DayState.green,
+      kind: DayCellKind.today,
+      done: 2,
+      total: 2,
+      kcal: 500,
+      adherencePct: 100,
+    ),
+  );
+  // June 11-30 (future)
+  for (var i = 11; i <= 30; i++) {
+    result.add(
+      cell(DateTime.utc(2026, 6, i), state: null, kind: DayCellKind.future),
+    );
+  }
+  // July 1-5 (trailing nulls)
+  for (var i = 0; i < 5; i++) {
+    result.add(null);
+  }
+  return result;
 }
 
 void _noop() {}

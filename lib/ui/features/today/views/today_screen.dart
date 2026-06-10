@@ -14,7 +14,6 @@ import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
 import '../../../core/widgets/meal_card.dart';
-import '../../../core/widgets/toast.dart';
 import '../view_models/day_controller.dart';
 import '../view_models/intake_freeze.dart';
 import '../view_models/today_providers.dart';
@@ -23,6 +22,7 @@ import 'formatting.dart';
 import 'intake_card.dart';
 import 'nudge_card.dart';
 import '../../../core/widgets/sheet_actions.dart';
+import '../../history/views/calendar_sheet.dart';
 import 'streak_chip.dart';
 
 /// The Today tab (S06 spec): appbar (date + greeting + calendar stub) ·
@@ -105,8 +105,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
           _AppBar(
             dateLabel: dateHeadline(selected),
             greeting: greetingFor(now, profile?.displayName),
-            onCalendarTap: () =>
-                showCrudoToast(context, 'Calendar — coming soon'),
+            onCalendarTap: () => showCalendarSheet(context),
           ),
           const SizedBox(height: Spacing.md),
           DayStrip(
@@ -134,7 +133,10 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                   Positioned(
                     top: -Spacing.sm,
                     right: Spacing.lg,
-                    child: StreakChip(count: streak),
+                    child: StreakChip(
+                      count: streak,
+                      onTap: () => context.go('/history'),
+                    ),
                   ),
                 ],
               ),

@@ -192,13 +192,12 @@ void main() {
     expect(await repo.getByDate(DateTime.utc(2026, 6, 5)), isNull);
   });
 
-  testWidgets('calendar button shows the coming-soon toast', (tester) async {
+  testWidgets('calendar button opens the calendar sheet', (tester) async {
     await pumpToday(tester);
     await tester.tap(find.byIcon(Icons.calendar_today_outlined));
-    await tester.pump();
-    expect(find.text('Calendar — coming soon'), findsOneWidget);
-    // Flush the toast's auto-dismiss timer so the test ends clean.
-    await tester.pump(const Duration(seconds: 5));
+    // Pump to settle the modal bottom sheet animation.
+    await tester.pumpAndSettle();
+    expect(find.text('LAST 30 DAYS'), findsOneWidget);
   });
 
   testWidgets('hero freezes while route open, settles after pop', (

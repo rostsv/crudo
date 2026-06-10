@@ -135,20 +135,20 @@ abstract class _$SelectedDate extends $Notifier<DateTime> {
   }
 }
 
-/// Streak count for the chip. Stub data until S12 writes real streaks —
-/// the provider contract is final, only the data source matures.
+/// Streak count for the chip. S12 writes real streaks via StreakCatchUp;
+/// the provider contract is final, only the data source matured.
 
 @ProviderFor(streakCount)
 final streakCountProvider = StreakCountProvider._();
 
-/// Streak count for the chip. Stub data until S12 writes real streaks —
-/// the provider contract is final, only the data source matures.
+/// Streak count for the chip. S12 writes real streaks via StreakCatchUp;
+/// the provider contract is final, only the data source matured.
 
 final class StreakCountProvider
     extends $FunctionalProvider<AsyncValue<int>, int, Stream<int>>
     with $FutureModifier<int>, $StreamProvider<int> {
-  /// Streak count for the chip. Stub data until S12 writes real streaks —
-  /// the provider contract is final, only the data source matures.
+  /// Streak count for the chip. S12 writes real streaks via StreakCatchUp;
+  /// the provider contract is final, only the data source matured.
   StreakCountProvider._()
     : super(
         from: null,

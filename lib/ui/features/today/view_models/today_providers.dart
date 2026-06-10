@@ -38,8 +38,8 @@ class SelectedDate extends _$SelectedDate {
   void select(DateTime date) => state = date;
 }
 
-/// Streak count for the chip. Stub data until S12 writes real streaks —
-/// the provider contract is final, only the data source matures.
+/// Streak count for the chip. S12 writes real streaks via StreakCatchUp;
+/// the provider contract is final, only the data source matured.
 @riverpod
 Stream<int> streakCount(Ref ref) =>
     ref.watch(streakRepositoryProvider).watch().map((s) => s.current);

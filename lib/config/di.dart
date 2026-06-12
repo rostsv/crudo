@@ -10,6 +10,7 @@ import 'package:crudo/domain/food/food.dart';
 import 'package:crudo/domain/repositories/day_repository.dart';
 import 'package:crudo/domain/repositories/food_repository.dart';
 import 'package:crudo/domain/repositories/meal_template_repository.dart';
+import 'package:crudo/domain/repositories/notification_service.dart';
 import 'package:crudo/domain/repositories/plan_template_repository.dart';
 import 'package:crudo/domain/repositories/profile_repository.dart';
 import 'package:crudo/domain/repositories/streak_repository.dart';
@@ -51,4 +52,8 @@ final profileRepositoryProvider = Provider<ProfileRepository>(
 
 final streakRepositoryProvider = Provider<StreakRepository>(
   (ref) => InMemoryStreakRepository(),
+);
+
+final notificationServiceProvider = Provider<NotificationService>(
+  (ref) => throw UnimplementedError('overridden in bootstrap()/tests'),
 );

@@ -21,6 +21,8 @@ const Map<String, List<String>> allowedPackageImports = {
     'package:flutter/services.dart', // rootBundle (seed asset)
     'package:flutter_riverpod/',
     'package:uuid/',
+    'package:flutter_local_notifications/',
+    'package:timezone/',
   ],
   'lib/config': [
     'dart:',

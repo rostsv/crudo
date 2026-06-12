@@ -138,7 +138,7 @@ final class HistoryStatsProvider
   }
 }
 
-String _$historyStatsHash() => r'2da1891e0cce9e9d33810c0e96c5b2059f2a257f';
+String _$historyStatsHash() => r'0370e896fe47495cdabe5aba6f4d99984325e604';
 
 /// Last 5 days descending (today first).
 

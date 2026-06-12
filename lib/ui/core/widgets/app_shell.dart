@@ -4,7 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import 'package:crudo/config/app_config.dart';
 import 'package:crudo/ui/features/history/views/milestone_sheet.dart';
+import 'package:crudo/ui/features/today/view_models/notification_scheduler_controller.dart';
+import 'package:crudo/ui/features/today/view_models/streak_at_risk_provider.dart';
 import 'package:crudo/ui/features/today/view_models/streak_catchup_controller.dart';
+import 'package:crudo/ui/features/today/view_models/today_providers.dart';
+import 'package:crudo/ui/features/today/views/streak_risk_sheet.dart';
 import '../themes/colors.dart';
 import '../themes/dimensions.dart';
 import '../themes/typography.dart';
@@ -25,11 +29,22 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// Context captured below the Navigator (inside Builder) for dialog show.
   BuildContext? _navigatorContext;
 
+  /// Day label the risk sheet was last shown for. streakAtRiskProvider re-emits
+  /// the same StreakRisk on every today-Day mutation, so without this guard the
+  /// sheet would re-pop each time a meal is marked. Show at most once per day.
+  DateTime? _riskShownForDay;
+
   @override
   Widget build(BuildContext context) {
     final ref = this.ref; // ConsumerState ref property
     final colors = Theme.of(context).extension<CrudoColors>()!;
     final isDev = ref.watch(appConfigProvider).isDev;
+
+    // Activate the notification scheduler and action router so they run while
+    // the shell is mounted. These are auto-dispose and need a watch/listen
+    // to stay alive.
+    ref.watch(notificationSchedulerProvider);
+    ref.watch(notificationActionRouterProvider);
 
     // Listen for streak milestones. The listener activates the auto-dispose
     // provider, which stays alive while this widget is mounted. On each frame
@@ -44,6 +59,22 @@ class _AppShellState extends ConsumerState<AppShell> {
         for (final m in milestones) {
           await showMilestoneSheet(ctx, m);
         }
+      });
+    });
+
+    // Listen for streak-at-risk banners. The provider re-emits the same risk on
+    // every today-Day mutation, so guard on the day label to show at most once
+    // per calendar day (not once per rebuild).
+    ref.listen<AsyncValue<StreakRisk?>>(streakAtRiskProvider, (prev, next) {
+      final risk = next.asData?.value;
+      if (risk == null) return;
+      final today = ref.read(todayProvider);
+      if (_riskShownForDay == today) return; // already shown today
+      _riskShownForDay = today;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final ctx = _navigatorContext;
+        if (ctx == null || !ctx.mounted) return;
+        showStreakRiskSheet(ctx, risk);
       });
     });
 

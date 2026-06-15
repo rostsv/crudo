@@ -76,6 +76,41 @@ void main() {
       check(specs.any((s) => s.kind == NotificationKind.risk)).isFalse();
       sub.close();
     });
+
+    test('reschedules on a prefs change (no day mutation) — Task 7', () async {
+      final fake = FakeNotificationService();
+      final c = container(fakeService: fake);
+
+      final sub = c.listen(dayControllerProvider(todayLabel), (_, _) {});
+      await c.read(dayControllerProvider(todayLabel).future);
+      // Keep the scheduler alive so a prefs emission re-runs its build.
+      final schedSub = c.listen(notificationSchedulerProvider, (_, _) {});
+      await c.read(notificationSchedulerProvider.future);
+      check(fake.scheduled.last).isNotEmpty();
+
+      // Turn every notification off — pure prefs edit, no day change. The
+      // scheduler watches profileProvider, so it must re-arm to an empty set.
+      final repo = c.read(profileRepositoryProvider);
+      final p = await repo.get();
+      await repo.save(
+        p.copyWith(
+          prefs: p.prefs.copyWith(
+            preOn: false,
+            atOn: false,
+            eodOn: false,
+            riskOn: false,
+          ),
+        ),
+      );
+      // Let the profileProvider stream emission propagate to the scheduler's
+      // watch before reading its re-armed result.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await c.read(notificationSchedulerProvider.future);
+
+      check(fake.scheduled.last).isEmpty();
+      schedSub.close();
+      sub.close();
+    });
   });
 
   group('NotificationActionRouter', () {

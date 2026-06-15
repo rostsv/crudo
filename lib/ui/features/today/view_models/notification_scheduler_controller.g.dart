@@ -161,7 +161,7 @@ final class NotificationActionRouterProvider
 }
 
 String _$notificationActionRouterHash() =>
-    r'14256c7e999b87d7164973d42689c10a46ac9507';
+    r'fe0c097188f5da966efbca456c080d108211fdb0';
 
 /// Pipes NotificationService.actions (and the one terminated-launch action)
 /// into dayController for today. Activated by AppShell.

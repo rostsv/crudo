@@ -31,7 +31,9 @@ class NotificationScheduler extends _$NotificationScheduler {
   Future<void> build() async {
     final today = ref.watch(todayProvider);
     final day = await ref.watch(dayControllerProvider(today).future);
-    final profile = await ref.read(profileRepositoryProvider).watch().first;
+    // Watch (not read-once) so a prefs edit (S15 RemindersSheet/threshold)
+    // re-arms the schedule immediately — not only on the next day-change.
+    final profile = await ref.watch(profileProvider.future);
     final muted = ref.watch(mutedRiskDayProvider) == today;
     final now = ref.read(clockProvider)();
 

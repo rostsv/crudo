@@ -23,7 +23,8 @@ Future<StreakRisk?> streakAtRisk(Ref ref) async {
   final today = ref.watch(todayProvider);
   if (ref.watch(mutedRiskDayProvider) == today) return null;
   final day = await ref.watch(dayControllerProvider(today).future);
-  final profile = await ref.read(profileRepositoryProvider).watch().first;
+  // Watch (not read-once) so a threshold edit (S15) re-evaluates risk now.
+  final profile = await ref.watch(profileProvider.future);
   final streak = await ref.read(streakRepositoryProvider).get();
   final now = ref.read(clockProvider)();
   final info = streakRiskInfo(day, profile.prefs.streakThreshold, now);

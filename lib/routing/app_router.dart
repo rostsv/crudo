@@ -13,6 +13,7 @@ import 'package:crudo/ui/features/meals/views/meal_template_builder_screen.dart'
 import 'package:crudo/ui/features/meals/views/meal_template_library_screen.dart';
 import 'package:crudo/domain/meal/meal_template.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
+import 'package:crudo/ui/features/onboarding/views/onboarding_flow_screen.dart';
 import 'package:crudo/ui/features/plans/views/plan_detail_screen.dart';
 import 'package:crudo/ui/features/plans/views/plans_screen.dart';
 import 'package:crudo/ui/features/profile/views/profile_screen.dart';
@@ -80,6 +81,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 FoodFormScreen(foodId: state.pathParameters['id']!),
           ),
         ],
+      ),
+
+      // S16: onboarding funnel (dev-reachable).
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingFlowScreen(),
       ),
 
       // S11: plan create — pushed over the shell. [seed] passed via extra.

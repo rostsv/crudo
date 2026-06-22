@@ -27,6 +27,8 @@ import 'ui/features/today/views/day_strip.dart';
 import 'ui/features/today/views/intake_card.dart';
 import 'ui/features/today/views/nudge_card.dart';
 import 'ui/features/today/views/streak_chip.dart';
+import 'ui/features/onboarding/views/pages/awareness_page.dart';
+import 'ui/features/onboarding/views/pages/structure_page.dart';
 import 'ui/features/today/views/formatting.dart';
 
 /// Widget preview showcase — renders every core widget in all relevant states.
@@ -331,6 +333,22 @@ class _PreviewHome extends StatelessWidget {
               onOverrideChanged: (_) {},
               errorText:
                   'Override differs by 21% from macros. Max allowed is 10%.',
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('AwarenessPage', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            SizedBox(
+              height: 600,
+              child: AwarenessPage(onContinue: _noop, onBack: _noop),
+            ),
+            const SizedBox(height: Spacing.lg),
+
+            const Text('StructurePage', style: CrudoText.headline),
+            const SizedBox(height: Spacing.md),
+            SizedBox(
+              height: 600,
+              child: StructurePage(onContinue: _noop, onBack: _noop),
             ),
             const SizedBox(height: Spacing.lg),
 

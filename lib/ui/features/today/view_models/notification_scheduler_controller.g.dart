@@ -105,7 +105,7 @@ final class NotificationSchedulerProvider
 }
 
 String _$notificationSchedulerHash() =>
-    r'234bd34ab38eec6ab625deac93cf384aeb8d8d29';
+    r'41bf34b00e4580d4984f6f2e3670a04fea19042a';
 
 /// Watches today's Day; on every change recomputes notificationSchedule and
 /// cancel-all-rearms via NotificationService. Strips the risk spec when today

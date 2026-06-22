@@ -46,4 +46,4 @@ final class StreakAtRiskProvider
   }
 }
 
-String _$streakAtRiskHash() => r'3859443dd9c4dc0a673af06a162a90a9cecd3716';
+String _$streakAtRiskHash() => r'e2eb67464e145d081c548065d975b56b6b113ce5';

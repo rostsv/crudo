@@ -5,7 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late ProviderContainer container;
-  setUp(() => container = ProviderContainer());
+  setUp(() {
+    container = ProviderContainer();
+    // Hold the autoDispose provider alive so state survives between reads —
+    // a bare read(.notifier)/mutate/re-read on an unlistened autoDispose
+    // provider can dispose and reset to the initial state between reads.
+    container.listen(onboardingControllerProvider, (_, _) {});
+  });
   tearDown(() => container.dispose());
 
   OnboardingController ctrl() =>

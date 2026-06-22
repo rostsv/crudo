@@ -2,6 +2,9 @@ import 'package:checks/checks.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
 import 'package:crudo/ui/core/widgets/primary_cta.dart';
 import 'package:crudo/ui/features/onboarding/views/onboarding_flow_screen.dart';
+import 'package:crudo/ui/features/onboarding/views/pages/awareness_page.dart';
+import 'package:crudo/ui/features/onboarding/views/pages/heard_about_page.dart';
+import 'package:crudo/ui/features/onboarding/views/pages/structure_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -13,6 +16,15 @@ void main() {
     ),
   );
 
+  // A PageView builds the cached neighbour page too, so several pages can hold
+  // a "Continue" PrimaryCta at once. Scope the tap to the visible page's type
+  // rather than a bare find.widgetWithText(PrimaryCta, 'Continue') (matches >1
+  // once the flow grows in S17).
+  Finder ctaOn(Type page, String label) => find.descendant(
+    of: find.byType(page),
+    matching: find.widgetWithText(PrimaryCta, label),
+  );
+
   testWidgets('advances Welcome → … → terminal via CTAs', (t) async {
     await pump(t);
     check(find.textContaining('Follow your meal plan').evaluate()).isNotEmpty();
@@ -21,11 +33,11 @@ void main() {
     await t.pumpAndSettle();
     check(find.text('You already know the plan.').evaluate()).isNotEmpty();
 
-    await t.tap(find.widgetWithText(PrimaryCta, 'Continue')); // awareness
+    await t.tap(ctaOn(AwarenessPage, 'Continue'));
     await t.pumpAndSettle();
     check(find.text('Structure beats willpower.').evaluate()).isNotEmpty();
 
-    await t.tap(find.widgetWithText(PrimaryCta, 'Continue')); // structure
+    await t.tap(ctaOn(StructurePage, 'Continue'));
     await t.pumpAndSettle();
     check(find.text('See how Crudo works').evaluate()).isNotEmpty();
 
@@ -39,7 +51,7 @@ void main() {
 
     await t.tap(find.text('TikTok'));
     await t.pumpAndSettle();
-    await t.tap(find.widgetWithText(PrimaryCta, 'Continue')); // heard-about
+    await t.tap(ctaOn(HeardAboutPage, 'Continue'));
     await t.pumpAndSettle();
     check(
       find.text('Tried something like this before?').evaluate(),
@@ -58,25 +70,25 @@ void main() {
   testWidgets('heard-about Continue gated until a selection', (t) async {
     await pump(t);
     // jump to heard-about
-    for (final label in [
-      'Set up my plan',
-      'Continue',
-      'Continue',
-      'Watch & Continue',
-      'Build my plan',
-    ]) {
-      await t.tap(find.widgetWithText(PrimaryCta, label));
-      await t.pumpAndSettle();
-    }
+    await t.tap(find.widgetWithText(PrimaryCta, 'Set up my plan'));
+    await t.pumpAndSettle();
+    await t.tap(ctaOn(AwarenessPage, 'Continue'));
+    await t.pumpAndSettle();
+    await t.tap(ctaOn(StructurePage, 'Continue'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(PrimaryCta, 'Watch & Continue'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(PrimaryCta, 'Build my plan'));
+    await t.pumpAndSettle();
     // no selection → Continue does nothing
-    await t.tap(find.widgetWithText(PrimaryCta, 'Continue'));
+    await t.tap(ctaOn(HeardAboutPage, 'Continue'));
     await t.pumpAndSettle();
     check(
       find.text('Where did you hear about Crudo?').evaluate(),
     ).isNotEmpty(); // still here
     await t.tap(find.text('Reddit'));
     await t.pumpAndSettle();
-    await t.tap(find.widgetWithText(PrimaryCta, 'Continue'));
+    await t.tap(ctaOn(HeardAboutPage, 'Continue'));
     await t.pumpAndSettle();
     check(
       find.text('Tried something like this before?').evaluate(),

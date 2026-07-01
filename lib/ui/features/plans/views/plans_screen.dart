@@ -5,13 +5,13 @@ import 'package:go_router/go_router.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
-import '../../../core/widgets/primary_cta.dart';
 import '../view_models/plans_list.dart';
 import 'plan_list_card.dart';
 
-/// S10 plans list screen. Shows every plan as a card with derived target,
-/// weekday chips, Today badge, and Inactive styling. Tapping pushes
-/// `/plans/:id`. A sticky "New plan" CTA sits at the bottom.
+/// S10 plans list screen. `LIBRARY` eyebrow + title, a top-right circular add
+/// button (the only "new plan" affordance), an advisory banner when a single
+/// plan covers the whole week, and a card per plan. Tapping a card pushes the
+/// read-only viewer at `/plans/:id`.
 class PlansScreen extends ConsumerWidget {
   const PlansScreen({super.key});
 
@@ -20,10 +20,54 @@ class PlansScreen extends ConsumerWidget {
     final rows = ref.watch(plansListProvider);
     final colors = Theme.of(context).extension<CrudoColors>()!;
 
+    // Advisory: only one plan exists, or a single plan blankets all 7 days.
+    final showRepeatsHint =
+        rows.length == 1 || rows.any((r) => r.days.toSet().length == 7);
+
     return SafeArea(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Main content fills remaining space
+          // Header: eyebrow + title + add button.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.md,
+              Spacing.md,
+              Spacing.md,
+              Spacing.lg,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('LIBRARY', style: CrudoText.label),
+                const SizedBox(height: Spacing.xs),
+                // '+' shares the title line so it aligns with "Plans".
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Expanded(
+                      child: Text('Plans', style: CrudoText.headline),
+                    ),
+                    _AddPlanButton(
+                      key: const ValueKey('new-plan'),
+                      onTap: () => context.push('/plans/new'),
+                      colors: colors,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (showRepeatsHint && rows.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(
+                Spacing.md,
+                0,
+                Spacing.md,
+                Spacing.lg,
+              ),
+              child: _RepeatsHint(),
+            ),
           Expanded(
             child: rows.isEmpty
                 ? Center(
@@ -35,16 +79,15 @@ class PlansScreen extends ConsumerWidget {
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.all(Spacing.md),
-                    itemCount: rows.length + 1, // +1 for headline
+                    padding: const EdgeInsets.fromLTRB(
+                      Spacing.md,
+                      Spacing.xs,
+                      Spacing.md,
+                      Spacing.md,
+                    ),
+                    itemCount: rows.length,
                     itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: Spacing.md),
-                          child: Text('Plans', style: CrudoText.headline),
-                        );
-                      }
-                      final row = rows[index - 1];
+                      final row = rows[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: Spacing.md),
                         child: PlanListCard(
@@ -55,18 +98,87 @@ class PlansScreen extends ConsumerWidget {
                     },
                   ),
           ),
-          // Sticky CTA
+        ],
+      ),
+    );
+  }
+}
+
+/// Add button — the sole "new plan" entry point. Bare icon (no fill); the
+/// [_size] box keeps a 48px touch target.
+class _AddPlanButton extends StatelessWidget {
+  const _AddPlanButton({required this.onTap, required this.colors, super.key});
+
+  final VoidCallback onTap;
+  final CrudoColors colors;
+
+  static const _size = 48.0; // touch target, 4px grid
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'New plan',
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          width: _size,
+          height: _size,
+          child: Icon(Icons.add, size: IconSizes.lg, color: colors.primary),
+        ),
+      ),
+    );
+  }
+}
+
+/// Advisory banner shown when a single plan covers the whole week.
+class _RepeatsHint extends StatelessWidget {
+  const _RepeatsHint();
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CrudoColors>()!;
+    return Container(
+      padding: const EdgeInsets.all(Spacing.md),
+      decoration: BoxDecoration(
+        color: colors.surfaceLow,
+        borderRadius: Radii.all(Radii.md),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon centered on the header line.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.info_outline,
+                size: IconSizes.md,
+                color: colors.onSurfaceMut,
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Text(
+                  'One plan repeats daily',
+                  style: CrudoText.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.xs),
+          // Indent to line up with the header text (past icon + gap).
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Spacing.md,
-              0,
-              Spacing.md,
-              Spacing.md,
-            ),
-            child: PrimaryCta(
-              key: const ValueKey('new-plan'),
-              label: 'New plan',
-              onPressed: () => context.push('/plans/new'),
+            padding: const EdgeInsets.only(left: IconSizes.md + Spacing.md),
+            child: Text(
+              'Assign different plans to specific days for variety.',
+              style: CrudoText.labelMd.copyWith(
+                color: colors.onSurfaceMut,
+                fontWeight: FontWeight.w400,
+              ),
             ),
           ),
         ],

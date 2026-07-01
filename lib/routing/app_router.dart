@@ -15,6 +15,7 @@ import 'package:crudo/domain/meal/meal_template.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
 import 'package:crudo/ui/features/onboarding/views/onboarding_flow_screen.dart';
 import 'package:crudo/ui/features/plans/views/plan_detail_screen.dart';
+import 'package:crudo/ui/features/plans/views/plan_view_screen.dart';
 import 'package:crudo/ui/features/plans/views/plans_screen.dart';
 import 'package:crudo/ui/features/profile/views/profile_screen.dart';
 import 'package:crudo/ui/features/today/views/today_screen.dart';
@@ -96,11 +97,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             PlanDetailScreen(planId: null, seed: state.extra as PlanTemplate?),
       ),
 
-      // S10: plan detail / editing — pushed over the shell.
+      // Plan editor — pushed over the shell (reached via EDIT / actions).
+      GoRoute(
+        path: '/plans/:id/edit',
+        builder: (context, state) =>
+            PlanDetailScreen(planId: state.pathParameters['id']!),
+      ),
+
+      // S10: read-only plan viewer — pushed over the shell.
       GoRoute(
         path: '/plans/:id',
         builder: (context, state) =>
-            PlanDetailScreen(planId: state.pathParameters['id']!),
+            PlanViewScreen(planId: state.pathParameters['id']!),
       ),
 
       // S08: meal detail / editor / picker — pushed over the shell. :date is

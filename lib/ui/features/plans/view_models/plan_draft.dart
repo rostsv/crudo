@@ -2,6 +2,7 @@ import 'package:crudo/domain/plan/plan_slot.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
 import 'package:crudo/domain/services/plan_scheduling.dart'; // WeekdayConflict
 import 'package:crudo/domain/shared/enums.dart'; // Goal
+import 'package:crudo/domain/shared/macros.dart'; // Macros
 import 'package:crudo/domain/shared/meal_time.dart'; // MealTime
 
 /// One editable plan slot. id/mealTemplateId/time persist; mealName/kcal are
@@ -15,8 +16,9 @@ typedef PlanSlotDraft = ({
 });
 
 /// One row of the plans list — all display data resolved up front.
-/// days/goal/kcal/mealCount drive the subtitle + weekday chips; isToday is
-/// `this == selectPlanForDate(plans, today)`.
+/// days/goal/kcal/mealCount drive the eyebrow + weekday strip; protein/carbs/
+/// fats feed the macro dots; isToday is `this == selectPlanForDate(plans,
+/// today)`.
 typedef PlanRowVm = ({
   String id,
   String name,
@@ -24,9 +26,26 @@ typedef PlanRowVm = ({
   days, // 0=Mon…6=Sun, dormant-inclusive (a paused plan keeps its days)
   Goal goal,
   int kcal,
+  int protein,
+  int carbs,
+  int fats,
   int mealCount,
   bool active,
   bool isToday,
+});
+
+/// One resolved slot in the read-only plan viewer: time · name · tag · kcal.
+typedef PlanSlotView = ({MealTime time, String mealName, String tag, int kcal});
+
+/// Read-only detail data for the plan viewer screen. `total` feeds the
+/// daily-target hero; `slots` are time-ordered.
+typedef PlanViewVm = ({
+  String name,
+  bool active,
+  List<int> days,
+  Macros total,
+  int mealCount,
+  List<PlanSlotView> slots,
 });
 
 /// Result of PlanDetailController.save(). committed:false carries the pending

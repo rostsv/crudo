@@ -1,6 +1,4 @@
-import 'package:checks/checks.dart';
 import 'package:crudo/domain/shared/enums.dart';
-import 'package:crudo/ui/core/widgets/primary_cta.dart';
 import 'package:crudo/ui/features/plans/view_models/plan_draft.dart';
 import 'package:crudo/ui/features/plans/view_models/plans_list.dart';
 import 'package:crudo/ui/features/plans/views/plan_list_card.dart';
@@ -19,6 +17,9 @@ void main() {
     name: 'Plan A',
     goal: Goal.cut,
     kcal: 2200,
+    protein: 175,
+    carbs: 220,
+    fats: 70,
     mealCount: 5,
     days: [0, 2, 4],
     active: true,
@@ -29,6 +30,9 @@ void main() {
     name: 'Plan B',
     goal: Goal.maintain,
     kcal: 1800,
+    protein: 120,
+    carbs: 150,
+    fats: 60,
     mealCount: 1,
     days: [5, 6],
     active: false,
@@ -71,25 +75,21 @@ void main() {
   }
 
   group('PlansScreen', () {
-    testWidgets('renders two PlanListCards with correct content', (
-      tester,
-    ) async {
+    testWidgets('renders LIBRARY eyebrow + Plans title', (tester) async {
+      await pumpScreen(tester, rows: [rowA, rowB]);
+
+      expect(find.text('LIBRARY'), findsOneWidget);
+      expect(find.text('Plans'), findsOneWidget);
+    });
+
+    testWidgets('renders two PlanListCards with meta lines', (tester) async {
       await pumpScreen(tester, rows: [rowA, rowB]);
 
       expect(find.byType(PlanListCard), findsNWidgets(2));
-
-      // Row A
       expect(find.text('Plan A'), findsOneWidget);
-      expect(find.text('CUT · 2200 KCAL · 5 meals'), findsOneWidget);
-      expect(find.text('Today'), findsOneWidget);
-
-      // Row B
+      expect(find.text('2200 kcal'), findsOneWidget);
       expect(find.text('Plan B'), findsOneWidget);
-      expect(find.text('MAINTAIN · 1800 KCAL · 1 meal'), findsOneWidget);
-      expect(find.text('Inactive'), findsOneWidget);
-
-      // Only A has Today badge
-      expect(find.text('Today'), findsOneWidget);
+      expect(find.text('1800 kcal'), findsOneWidget);
     });
 
     testWidgets('tapping a card pushes to /plans/:id', (tester) async {
@@ -109,31 +109,56 @@ void main() {
     });
   });
 
-  group('PlansScreen — New plan CTA', () {
-    testWidgets('New plan button present with populated list', (tester) async {
-      await pumpScreen(tester, rows: [rowA]);
+  group('PlansScreen — add button', () {
+    testWidgets('circular add button present with populated list', (
+      tester,
+    ) async {
+      await pumpScreen(tester, rows: [rowA, rowB]);
 
-      final cta = tester.widget<PrimaryCta>(
-        find.byKey(const ValueKey('new-plan')),
-      );
-      check(cta.label).equals('New plan');
-      check(cta.onPressed).isNotNull();
+      expect(find.byKey(const ValueKey('new-plan')), findsOneWidget);
     });
 
-    testWidgets('New plan button present in empty state', (tester) async {
+    testWidgets('add button present in empty state', (tester) async {
       await pumpScreen(tester, rows: const []);
 
       expect(find.text('No plans yet'), findsOneWidget);
       expect(find.byKey(const ValueKey('new-plan')), findsOneWidget);
     });
 
-    testWidgets('tapping New plan navigates to /plans/new', (tester) async {
+    testWidgets('tapping add navigates to /plans/new', (tester) async {
       await pumpScreen(tester, rows: [rowA]);
 
       await tester.tap(find.byKey(const ValueKey('new-plan')));
       await tester.pumpAndSettle();
 
       expect(find.text('New Plan Form'), findsOneWidget);
+    });
+  });
+
+  group('PlansScreen — repeats hint', () {
+    testWidgets('shows when a single plan covers all 7 days', (tester) async {
+      final fullWeek = (
+        id: 'F',
+        name: 'Everyday',
+        goal: Goal.maintain,
+        kcal: 2000,
+        protein: 150,
+        carbs: 200,
+        fats: 65,
+        mealCount: 3,
+        days: [0, 1, 2, 3, 4, 5, 6],
+        active: true,
+        isToday: true,
+      );
+      await pumpScreen(tester, rows: [fullWeek]);
+
+      expect(find.text('One plan repeats daily'), findsOneWidget);
+    });
+
+    testWidgets('hidden when multiple plans split the week', (tester) async {
+      await pumpScreen(tester, rows: [rowA, rowB]);
+
+      expect(find.text('One plan repeats daily'), findsNothing);
     });
   });
 }

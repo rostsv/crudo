@@ -3,22 +3,23 @@ import 'package:flutter/material.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart' as dim;
 import '../../../core/themes/typography.dart';
+import '../../../core/widgets/macro_chip.dart';
 import '../view_models/plan_draft.dart';
 
-/// One row in the plans list. Displays name, derived subtitle, weekday chips,
-/// a "Today" badge, and an "Inactive" tag for paused plans.
+/// One row in the plans list. An eyebrow (`GOAL · KCAL · ACTIVE`) sits above
+/// the name; below it a meta line (meal count + kcal + P/C/F macro dots) and a
+/// full-width weekday strip. A trailing chevron marks the card as navigable.
 class PlanListCard extends StatelessWidget {
   const PlanListCard({required this.row, required this.onTap, super.key});
 
   final PlanRowVm row;
   final VoidCallback onTap;
 
-  // Weekday labels are defined in _WeekdayStrip._labels
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
     final isInactive = !row.active;
+    final onSurface = isInactive ? colors.onSurfaceMut : colors.onSurface;
 
     return Semantics(
       button: true,
@@ -34,40 +35,67 @@ class PlanListCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Eyebrow + trailing chevron.
               Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    child: Text(
-                      row.name,
-                      style: CrudoText.title.copyWith(
-                        color: isInactive
-                            ? colors.onSurfaceMut
-                            : colors.onSurface,
+                    child: Text.rich(
+                      TextSpan(
+                        style: CrudoText.label.copyWith(
+                          color: colors.onSurfaceMut,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: row.active ? 'ACTIVE' : 'PAUSED',
+                            style: TextStyle(
+                              color: row.active
+                                  ? colors.primary
+                                  : colors.onSurfaceMut,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          TextSpan(text: ' · ${_mealsLabel().toUpperCase()}'),
+                        ],
                       ),
                     ),
                   ),
-                  if (row.isToday) ...[
-                    const SizedBox(width: dim.Spacing.sm),
-                    _Badge(
-                      label: 'Today',
-                      background: colors.primaryContainer,
-                      foreground: colors.primary,
-                    ),
-                  ],
-                  if (isInactive) ...[
-                    const SizedBox(width: dim.Spacing.sm),
-                    _Badge(
-                      label: 'Inactive',
-                      background: colors.surfaceHigh,
-                      foreground: colors.onSurfaceMut,
-                    ),
-                  ],
+                  const SizedBox(width: dim.Spacing.sm),
+                  Icon(
+                    Icons.chevron_right,
+                    size: dim.IconSizes.md,
+                    color: colors.onSurfaceVar,
+                  ),
                 ],
               ),
               const SizedBox(height: dim.Spacing.xs),
-              Text(
-                _subtitle(),
-                style: CrudoText.body.copyWith(color: colors.onSurfaceVar),
+              Text(row.name, style: CrudoText.title.copyWith(color: onSurface)),
+              const SizedBox(height: dim.Spacing.xs),
+              // Meta line: kcal · P/C/F dots.
+              Wrap(
+                spacing: dim.Spacing.sm,
+                runSpacing: dim.Spacing.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  Text(
+                    '${row.kcal} kcal',
+                    style: CrudoText.labelMd.copyWith(
+                      color: colors.onSurfaceVar,
+                    ),
+                  ),
+                  MacroChip(
+                    grams: row.protein.toDouble(),
+                    color: colors.proteinColor,
+                  ),
+                  MacroChip(
+                    grams: row.carbs.toDouble(),
+                    color: colors.carbsColor,
+                  ),
+                  MacroChip(
+                    grams: row.fats.toDouble(),
+                    color: colors.fatsColor,
+                  ),
+                ],
               ),
               const SizedBox(height: dim.Spacing.sm),
               _WeekdayStrip(row: row),
@@ -78,12 +106,11 @@ class PlanListCard extends StatelessWidget {
     );
   }
 
-  String _subtitle() {
-    final meals = row.mealCount == 1 ? '1 meal' : '${row.mealCount} meals';
-    return '${row.goal.name.toUpperCase()} · ${row.kcal} KCAL · $meals';
-  }
+  String _mealsLabel() =>
+      row.mealCount == 1 ? '1 meal' : '${row.mealCount} meals';
 }
 
+/// Full-width weekday strip: seven equal cells sharing the content line.
 class _WeekdayStrip extends StatelessWidget {
   const _WeekdayStrip({required this.row});
 
@@ -99,10 +126,12 @@ class _WeekdayStrip extends StatelessWidget {
       children: [
         for (var i = 0; i < 7; i++) ...[
           if (i > 0) const SizedBox(width: dim.Spacing.xs),
-          _DayCell(
-            label: _labels[i],
-            filled: row.days.contains(i),
-            isInactive: isInactive,
+          Expanded(
+            child: _DayCell(
+              label: _labels[i],
+              filled: row.days.contains(i),
+              isInactive: isInactive,
+            ),
           ),
         ],
       ],
@@ -132,47 +161,15 @@ class _DayCell extends StatelessWidget {
         ? (isInactive ? colors.onSurfaceMut : colors.surfaceLowest)
         : colors.onSurfaceMut;
 
-    return Container(
-      width: 28,
-      height: 28,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: dim.Radii.all(dim.Radii.full),
-      ),
-      child: Text(
-        label,
-        style: CrudoText.labelMd.copyWith(color: fgColor, fontSize: 10),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.label,
-    required this.background,
-    required this.foreground,
-  });
-
-  final String label;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: dim.Spacing.sm,
-        vertical: dim.Spacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: dim.Radii.all(dim.Radii.full),
-      ),
-      child: Text(
-        label,
-        style: CrudoText.labelMd.copyWith(color: foreground, fontSize: 10),
+    return SizedBox(
+      height: 32, // chip height (width > height via Expanded), 4px grid
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: dim.Radii.all(dim.Radii.sm),
+        ),
+        child: Text(label, style: CrudoText.labelMd.copyWith(color: fgColor)),
       ),
     );
   }

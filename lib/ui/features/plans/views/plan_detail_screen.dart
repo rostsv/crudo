@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -139,6 +140,7 @@ class _PlanDetailFormState extends ConsumerState<_PlanDetailForm> {
       showCrudoToast(
         context,
         "Can't delete your only plan",
+        body: 'Create another plan before deleting this one.',
         kind: ToastKind.warn,
       );
       return;
@@ -153,6 +155,7 @@ class _PlanDetailFormState extends ConsumerState<_PlanDetailForm> {
       showCrudoToast(
         context,
         "Can't delete your only plan",
+        body: 'Create another plan before deleting this one.',
         kind: ToastKind.warn,
       );
     }
@@ -299,13 +302,29 @@ class _PlanDetailFormState extends ConsumerState<_PlanDetailForm> {
   }
 
   Future<void> _editTime(int index, MealTime current) async {
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: current.hour, minute: current.minute),
+    var picked = DateTime(2020, 1, 1, current.hour, current.minute);
+    final result = await showCrudoSheet<MealTime>(
+      context,
+      builder: (sheetCtx) => SheetScaffold(
+        title: 'Meal time',
+        body: SizedBox(
+          height: 216, // Cupertino wheel intrinsic height (8px grid)
+          child: CupertinoDatePicker(
+            mode: CupertinoDatePickerMode.time,
+            use24hFormat: MediaQuery.alwaysUse24HourFormatOf(sheetCtx),
+            initialDateTime: picked,
+            onDateTimeChanged: (dt) => picked = dt,
+          ),
+        ),
+        cta: PrimaryCta(
+          label: 'Done',
+          onPressed: () => Navigator.of(
+            sheetCtx,
+          ).pop(MealTime(picked.hour * 60 + picked.minute)),
+        ),
+      ),
     );
-    if (picked != null && mounted) {
-      _ctrl.setSlotTime(index, MealTime(picked.hour * 60 + picked.minute));
-    }
+    if (result != null && mounted) _ctrl.setSlotTime(index, result);
   }
 
   Future<void> _addMeals() async {
@@ -447,19 +466,21 @@ class _PlanDetailFormState extends ConsumerState<_PlanDetailForm> {
                       // Weekday chips
                       const Text('REPEATS ON', style: CrudoText.label),
                       const SizedBox(height: Spacing.sm),
-                      Wrap(
-                        spacing: Spacing.sm,
-                        runSpacing: Spacing.sm,
+                      Row(
                         children: [
-                          for (var i = 0; i < 7; i++)
-                            PlanDayChip(
-                              key: ValueKey('day-chip-$i'),
-                              label: _weekdayLabels[i],
-                              selected: draft.days.contains(i),
-                              conflict: conflictDays.contains(i),
-                              colors: colors,
-                              onTap: () => _ctrl.toggleDay(i),
+                          for (var i = 0; i < 7; i++) ...[
+                            if (i > 0) const SizedBox(width: Spacing.xs),
+                            Expanded(
+                              child: PlanDayChip(
+                                key: ValueKey('day-chip-$i'),
+                                label: _weekdayLabels[i],
+                                selected: draft.days.contains(i),
+                                conflict: conflictDays.contains(i),
+                                colors: colors,
+                                onTap: () => _ctrl.toggleDay(i),
+                              ),
                             ),
+                          ],
                         ],
                       ),
 
@@ -488,14 +509,6 @@ class _PlanDetailFormState extends ConsumerState<_PlanDetailForm> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: Spacing.lg),
-
-                      // Macro preview card
-                      _MacroPreviewCard(
-                        macros: _ctrl.totalMacros,
-                        goal: goal,
-                        colors: colors,
-                      ),
                       const SizedBox(height: Spacing.lg),
 
                       // Meals (editable slots)
@@ -548,6 +561,14 @@ class _PlanDetailFormState extends ConsumerState<_PlanDetailForm> {
                             fontWeight: FontWeight.w700,
                           ),
                         ),
+                      ),
+                      const SizedBox(height: Spacing.lg),
+
+                      // Daily-target summary (bottom, per prototype).
+                      _MacroPreviewCard(
+                        macros: _ctrl.totalMacros,
+                        goal: goal,
+                        colors: colors,
                       ),
                       const SizedBox(height: Spacing.lg),
 
@@ -888,19 +909,20 @@ class PlanDayChip extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: Radii.all(Radii.full),
-          ),
-          child: Text(
-            label,
-            style: CrudoText.body.copyWith(
-              fontWeight: FontWeight.w700,
-              color: fg,
+        child: AspectRatio(
+          aspectRatio: 1,
+          child: Container(
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: Radii.all(Radii.sm),
+            ),
+            child: Text(
+              label,
+              style: CrudoText.body.copyWith(
+                fontWeight: FontWeight.w700,
+                color: fg,
+              ),
             ),
           ),
         ),

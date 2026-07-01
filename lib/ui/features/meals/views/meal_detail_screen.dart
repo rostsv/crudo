@@ -18,6 +18,7 @@ import '../../../core/widgets/confirm_sheet.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
 import '../../../core/widgets/macro_chip.dart';
+import '../../../core/widgets/macro_total_card.dart';
 import '../../../core/widgets/sheet_actions.dart';
 import '../../../core/widgets/toast.dart';
 import '../../today/view_models/day_controller.dart';
@@ -352,8 +353,8 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
   }
 }
 
-/// Total-intake card: kcal hero (left) + macro tiles stacked in a column
-/// (right) + tag pills.
+/// Total-intake card: [MacroTotalCard] (tonal) with the meal's tag pills
+/// passed as the footer slot.
 class _MacroSummary extends StatelessWidget {
   const _MacroSummary({required this.macros, required this.tags});
 
@@ -363,87 +364,12 @@ class _MacroSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
-    final tiles = [
-      ('PROTEIN', macros.protein, colors.proteinColor),
-      ('CARBS', macros.carbs, colors.carbsColor),
-      ('FATS', macros.fats, colors.fatsColor),
-    ];
-    return Container(
-      padding: const EdgeInsets.all(Spacing.md),
-      decoration: BoxDecoration(
-        color: colors.surfaceLow,
-        borderRadius: Radii.all(Radii.lg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('TOTAL INTAKE', style: CrudoText.label),
-          const SizedBox(height: Spacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      '${macros.kcal.round()}',
-                      key: const ValueKey('detail-kcal'),
-                      style: CrudoText.display,
-                    ),
-                    const SizedBox(width: Spacing.sm),
-                    Text(
-                      'kcal',
-                      style: CrudoText.body.copyWith(
-                        color: colors.onSurfaceMut,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: Spacing.md),
-              IntrinsicWidth(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    for (final (label, value, accent) in tiles) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: Spacing.sm,
-                          vertical: Spacing.xs,
-                        ),
-                        decoration: BoxDecoration(
-                          color: colors.surface,
-                          borderRadius: Radii.all(Radii.md),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              label,
-                              style: CrudoText.label.copyWith(
-                                color: colors.onSurfaceMut,
-                              ),
-                            ),
-                            const SizedBox(width: Spacing.sm),
-                            Text(
-                              '${value.round()}g',
-                              style: CrudoText.title.copyWith(color: accent),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (label != 'FATS') const SizedBox(height: Spacing.xs),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: Spacing.md),
-            Wrap(
+    return MacroTotalCard(
+      macros: macros,
+      label: 'TOTAL INTAKE',
+      footer: tags.isEmpty
+          ? null
+          : Wrap(
               spacing: Spacing.xs,
               runSpacing: Spacing.xs,
               children: [
@@ -466,9 +392,6 @@ class _MacroSummary extends StatelessWidget {
                   ),
               ],
             ),
-          ],
-        ],
-      ),
     );
   }
 }

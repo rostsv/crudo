@@ -161,9 +161,9 @@ void main() {
         await open(tester, date: today);
         final colors = CrudoColors.light;
 
-        expect(find.text('PROTEIN'), findsOneWidget);
-        expect(find.text('CARBS'), findsOneWidget);
-        expect(find.text('FATS'), findsOneWidget);
+        expect(find.text('Protein'), findsOneWidget);
+        expect(find.text('Carbs'), findsOneWidget);
+        expect(find.text('Fats'), findsOneWidget);
         expect(find.text('32g'), findsOneWidget);
         expect(find.text('77g'), findsOneWidget);
         expect(find.text('17g'), findsOneWidget);

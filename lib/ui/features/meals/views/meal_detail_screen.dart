@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../domain/meal/meal_snapshot.dart';
 import '../../../../domain/services/meal_lifecycle.dart';
 import '../../../../domain/services/nutrition.dart';
 import '../../../../domain/shared/enums.dart';
@@ -9,27 +10,48 @@ import '../../../../domain/shared/macros.dart';
 import '../../../core/formatting.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
+import '../../../core/themes/dimensions.dart' as dim;
 import '../../../core/themes/typography.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
 import '../../../core/widgets/sheet_actions.dart';
-import 'swap_sheet.dart';
 import '../../../core/widgets/toast.dart';
 import '../../today/view_models/day_controller.dart';
 import '../../today/view_models/today_providers.dart';
-import 'snooze_sheet.dart';
+import 'meal_actions_sheet.dart';
 
 /// S08 meal detail route — replaces the S06 MealSheet stand-in. Day modes:
 /// today = marking + snooze/swap/edit · future = inert checklist + swap/edit
 /// (first content edit detaches the day, S05 §4.2) · past = read-only.
 /// Status display ONLY via mealStatus; eligibility ONLY via the predicates.
-class MealDetailScreen extends ConsumerWidget {
+///
+/// Check state is a local draft until the user taps [Log meal]. Leaving the
+/// screen without logging discards the draft.
+class MealDetailScreen extends ConsumerStatefulWidget {
   const MealDetailScreen({required this.date, required this.mealId, super.key});
 
   final DateTime date;
   final String mealId;
 
+  @override
+  ConsumerState<MealDetailScreen> createState() => _MealDetailScreenState();
+}
+
+class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
   static const _guardMessage = "That can't be changed anymore.";
+
+  /// Local draft of checked ingredient indices. `null` until the persisted
+  /// meal first resolves; seeded from existing checked items so re-opening a
+  /// logged meal shows its state. Once the user touches a check or the
+  /// check-all toggle, [_userChanged] locks the draft and it is no longer
+  /// reseeded from persisted state.
+  Set<int>? _draft;
+  bool _userChanged = false;
+
+  Set<int> _persistedChecked(MealSnapshot meal) => {
+    for (final (i, item) in meal.items.indexed)
+      if (item.checked) i,
+  };
 
   Future<void> _run(
     BuildContext context,
@@ -37,17 +59,36 @@ class MealDetailScreen extends ConsumerWidget {
     bool pop = false,
   }) => runDayOp(context, op, guardMessage: _guardMessage, pop: pop);
 
+  void _toggleDraft(int index) {
+    setState(() {
+      _userChanged = true;
+      _draft = {...?_draft}..toggle(index);
+    });
+  }
+
+  void _toggleCheckAll(int itemCount) {
+    setState(() {
+      _userChanged = true;
+      _draft = _draft!.length == itemCount
+          ? <int>{}
+          : {for (var i = 0; i < itemCount; i++) i};
+    });
+  }
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
-    final day = ref.watch(dayControllerProvider(date)).value;
-    final meal = day?.meals.where((m) => m.id == mealId).firstOrNull;
-    if (day == null) {
+    final dayAsync = ref.watch(dayControllerProvider(widget.date));
+    final day = dayAsync.value;
+    final meal = day?.meals.where((m) => m.id == widget.mealId).firstOrNull;
+
+    if (dayAsync.isLoading || dayAsync.hasError || day == null) {
       return Scaffold(
         backgroundColor: colors.surface,
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+
     if (meal == null) {
       // Future-day preview ids are throwaway (S05 §4.2): a template edit
       // while this route is open re-mints them — degrade gracefully.
@@ -65,11 +106,11 @@ class MealDetailScreen extends ConsumerWidget {
                   color: colors.onSurface,
                 ),
               ),
-              Expanded(
+              const Expanded(
                 child: Center(
                   child: Text(
                     'This meal is no longer here.',
-                    key: const ValueKey('meal-gone'),
+                    key: ValueKey('meal-gone'),
                     style: CrudoText.body,
                   ),
                 ),
@@ -82,16 +123,20 @@ class MealDetailScreen extends ConsumerWidget {
 
     final now = ref.watch(clockProvider)();
     final today = ref.watch(todayProvider);
-    final isToday = date.isAtSameMomentAs(today);
-    final isPast = date.isBefore(today);
-    final status = mealStatus(day, mealId, now);
+    final isToday = widget.date.isAtSameMomentAs(today);
+    final status = mealStatus(day, widget.mealId, now);
     final canEdit = canEditMealContent(meal, day.date, now);
-    final ctrl = ref.read(dayControllerProvider(date).notifier);
+    final ctrl = ref.read(dayControllerProvider(widget.date).notifier);
     final tag = meal.meal.tags.isEmpty ? 'Meal' : meal.meal.tags.first.name;
 
     final items = meal.meal.items;
-    final checkedCount = items.where((i) => i.checked).length;
-    final isPartial = checkedCount > 0 && checkedCount < items.length;
+
+    // Seed the draft from persisted state whenever it resolves, until the
+    // user has interacted with it.
+    if (!_userChanged) {
+      _draft = _persistedChecked(meal.meal);
+    }
+    final draft = _draft!;
 
     final snoozedLabel =
         meal.snoozedUntil != null &&
@@ -153,7 +198,9 @@ class MealDetailScreen extends ConsumerWidget {
                           );
                           return;
                         }
-                        context.push('/meal/${dayParam(date)}/$mealId/edit');
+                        context.push(
+                          '/meal/${dayParam(widget.date)}/${widget.mealId}/edit',
+                        );
                       },
                       icon: Icon(
                         Icons.edit_outlined,
@@ -183,97 +230,34 @@ class MealDetailScreen extends ConsumerWidget {
                       const Expanded(
                         child: Text('Ingredients', style: CrudoText.headlineSm),
                       ),
-                      Text(
-                        '$checkedCount OF ${items.length} EATEN',
-                        key: const ValueKey('eaten-count'),
-                        style: CrudoText.label,
-                      ),
+                      if (isToday && items.isNotEmpty) ...[
+                        _CheckAllToggle(
+                          allChecked: draft.length == items.length,
+                          colors: colors,
+                          onTap: () => _toggleCheckAll(items.length),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: Spacing.sm),
-                  _EatenProgress(
-                    fraction: items.isEmpty ? 0 : checkedCount / items.length,
-                    colors: colors,
-                  ),
-                  const SizedBox(height: Spacing.sm),
-                  for (final (i, item) in items.indexed)
+                  for (final (i, item) in items.indexed) ...[
                     _ItemRow(
                       key: ValueKey('item-check-$i'),
                       name: item.food.name,
                       grams: item.food.grams.value,
                       kcal: item.food.kcal,
-                      checked: item.checked,
+                      checked: draft.contains(i),
                       colors: colors,
-                      onTap: !isToday
-                          ? null
-                          : () => _run(
-                              context,
-                              () => item.checked
-                                  ? ctrl.uncheckItem(mealId, i)
-                                  : ctrl.checkItem(mealId, i),
-                            ),
+                      onTap: !isToday ? null : () => _toggleDraft(i),
                     ),
-                  if (!isPast) ...[
-                    const SizedBox(height: Spacing.md),
-                    Row(
-                      children: [
-                        if (isToday) ...[
-                          Expanded(
-                            child: _ActionTile(
-                              key: const ValueKey('tile-snooze'),
-                              icon: Icons.snooze_outlined,
-                              title: 'Snooze',
-                              subtitle:
-                                  '${snoozePresetMinutes.last}m delay, no further',
-                              enabled: canSnoozeMeal(day, mealId, now, today),
-                              colors: colors,
-                              onTap: () => showCrudoSheet<void>(
-                                context,
-                                builder: (_) =>
-                                    SnoozeSheet(date: date, mealId: mealId),
-                              ),
-                              onDisabledTap: () {
-                                final reason = snoozeIneligibilityReason(
-                                  day,
-                                  mealId,
-                                  now,
-                                  today,
-                                );
-                                if (reason != null) {
-                                  showCrudoToast(
-                                    context,
-                                    reason,
-                                    kind: ToastKind.warn,
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: Spacing.sm),
-                        ],
-                        Expanded(
-                          child: _ActionTile(
-                            key: const ValueKey('tile-swap'),
-                            icon: Icons.swap_horiz,
-                            title: 'Swap meal',
-                            subtitle: 'Pick from library',
-                            enabled: canEdit,
-                            colors: colors,
-                            onTap: () => showCrudoSheet<void>(
-                              context,
-                              builder: (_) =>
-                                  SwapSheet(date: date, mealId: mealId),
-                            ),
-                            onDisabledTap: () => showCrudoToast(
-                              context,
-                              _guardMessage,
-                              kind: ToastKind.warn,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    if (i != items.length - 1)
+                      const SizedBox(height: Spacing.sm),
                   ],
+                  const SizedBox(height: Spacing.sm),
+                  _EatenProgress(
+                    fraction: items.isEmpty ? 0 : draft.length / items.length,
+                    colors: colors,
+                  ),
                 ],
               ),
             ),
@@ -285,32 +269,41 @@ class MealDetailScreen extends ConsumerWidget {
           : SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.all(Spacing.md),
+                padding: const EdgeInsets.fromLTRB(
+                  Spacing.md,
+                  Spacing.md,
+                  Spacing.sm,
+                  Spacing.md,
+                ),
                 child: Row(
                   children: [
                     Expanded(
-                      child: SecondaryAction(
-                        label: 'Skip',
-                        enabled: canSkipMeal(day, mealId, today),
-                        onTap: () => _run(
-                          context,
-                          () => ctrl.skipMeal(mealId),
-                          pop: true,
-                        ),
+                      child: PrimaryCta(
+                        label: 'Log meal',
+                        enabled: draft.isNotEmpty,
+                        onPressed: draft.isNotEmpty
+                            ? () => _run(
+                                context,
+                                () => ctrl.logMeal(widget.mealId, draft),
+                                pop: true,
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(width: Spacing.sm),
-                    Expanded(
-                      flex: 2,
-                      child: PrimaryCta(
-                        label: isPartial ? 'Save Partial' : 'Mark Done',
-                        onPressed: checkedCount == 0
-                            ? () => _run(
-                                context,
-                                () => ctrl.markAllEaten(mealId),
-                                pop: true,
-                              )
-                            : () => context.pop(),
+                    IconButton(
+                      key: const ValueKey('meal-actions'),
+                      onPressed: () => showCrudoSheet<void>(
+                        context,
+                        builder: (_) => MealActionsSheet(
+                          date: widget.date,
+                          mealId: widget.mealId,
+                        ),
+                      ),
+                      icon: Icon(
+                        Icons.more_vert,
+                        size: IconSizes.lg,
+                        color: colors.onSurface,
                       ),
                     ),
                   ],
@@ -406,7 +399,9 @@ class _MacroSummary extends StatelessWidget {
   }
 }
 
-/// Thin eaten-fraction bar. Height = 4 (4px grid; design_system §5).
+/// Thin eaten-fraction bar under the ingredient list. Height = 4 (4px grid;
+/// design_system §5). The filled portion animates smoothly when the draft
+/// changes.
 class _EatenProgress extends StatelessWidget {
   const _EatenProgress({required this.fraction, required this.colors});
 
@@ -417,23 +412,30 @@ class _EatenProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: Radii.all(Radii.full),
-      child: SizedBox(
-        height: _height,
-        child: Row(
-          children: [
-            Expanded(
-              flex: (fraction * 1000).round(),
-              child: ColoredBox(color: colors.primary),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ClipRRect(
+          borderRadius: Radii.all(Radii.full),
+          child: SizedBox(
+            height: _height,
+            child: Stack(
+              children: [
+                Positioned.fill(child: ColoredBox(color: colors.surfaceLow)),
+                AnimatedContainer(
+                  duration: dim.Durations.fast,
+                  curve: Curves.easeOut,
+                  width: (fraction * constraints.maxWidth).clamp(
+                    0,
+                    constraints.maxWidth,
+                  ),
+                  height: _height,
+                  color: colors.primary,
+                ),
+              ],
             ),
-            Expanded(
-              flex: ((1 - fraction) * 1000).round(),
-              child: ColoredBox(color: colors.surfaceLow),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
@@ -476,9 +478,16 @@ class _ItemRow extends StatelessWidget {
               _CheckCircle(checked: checked, size: _checkSize),
               const SizedBox(width: Spacing.md),
               Expanded(
-                child: Text(
-                  name,
-                  style: CrudoText.body.copyWith(color: colors.onSurface),
+                child: AnimatedDefaultTextStyle(
+                  duration: dim.Durations.fast,
+                  curve: Curves.easeOut,
+                  style: checked
+                      ? CrudoText.body.copyWith(
+                          color: colors.onSurfaceMut,
+                          decoration: TextDecoration.lineThrough,
+                        )
+                      : CrudoText.body.copyWith(color: colors.onSurface),
+                  child: Text(name),
                 ),
               ),
               Text(
@@ -503,8 +512,12 @@ class _CheckCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
     return CustomPaint(
-      painter: checked ? null : _CheckRingPainter(colors.outline),
-      child: Container(
+      // Ghost-border ring on both states so the circle contrasts against the
+      // background even when filled (design_system §2 ghost-border fallback).
+      painter: _CheckRingPainter(colors.outline),
+      child: AnimatedContainer(
+        duration: dim.Durations.fast,
+        curve: Curves.easeOut,
         width: size,
         height: size,
         alignment: Alignment.center,
@@ -512,9 +525,17 @@ class _CheckCircle extends StatelessWidget {
           color: checked ? colors.primary : colors.surfaceLowest,
           shape: BoxShape.circle,
         ),
-        child: checked
-            ? Icon(Icons.check, size: IconSizes.md, color: colors.surfaceLowest)
-            : null,
+        child: AnimatedSwitcher(
+          duration: dim.Durations.fast,
+          child: checked
+              ? Icon(
+                  Icons.check,
+                  key: const ValueKey('check-icon'),
+                  size: IconSizes.md,
+                  color: colors.surfaceLowest,
+                )
+              : const SizedBox.shrink(key: ValueKey('check-icon-empty')),
+        ),
       ),
     );
   }
@@ -543,67 +564,59 @@ class _CheckRingPainter extends CustomPainter {
       oldDelegate.color != color;
 }
 
-/// meal.jsx 91–106 action tile: icon + title + subtitle, muted when disabled.
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
+/// Small "check all / uncheck all" toggle in the ingredients header (today
+/// only). Operates on the local draft only — nothing persists until
+/// [DayController.logMeal] is invoked via the Log meal button.
+class _CheckAllToggle extends StatelessWidget {
+  const _CheckAllToggle({
+    required this.allChecked,
     required this.colors,
-    this.enabled = true,
-    this.onTap,
-    this.onDisabledTap,
-    super.key,
+    required this.onTap,
   });
 
-  final IconData icon;
-  final String title;
-  final String subtitle;
+  final bool allChecked;
   final CrudoColors colors;
-  final bool enabled;
-  final VoidCallback? onTap;
-
-  /// Fires when the tile is tapped while disabled (S05.1: ineligibility
-  /// toast). The tile still renders at Opacities.disabled — never hides.
-  final VoidCallback? onDisabledTap;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1 : Opacities.disabled,
-      child: Semantics(
-        button: enabled && onTap != null,
-        label: title,
-        child: GestureDetector(
-          onTap: enabled ? onTap : onDisabledTap,
-          behavior: HitTestBehavior.opaque,
-          child: Container(
-            padding: const EdgeInsets.all(Spacing.md),
-            decoration: BoxDecoration(
-              color: colors.surfaceLow,
-              borderRadius: Radii.all(Radii.md),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: IconSizes.md, color: colors.primary),
-                const SizedBox(height: Spacing.xs),
-                Text(
-                  title,
-                  style: CrudoText.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurface,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: CrudoText.body.copyWith(color: colors.onSurfaceMut),
-                ),
-              ],
-            ),
+    final label = allChecked ? 'Uncheck all' : 'Check all';
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        key: const ValueKey('check-all-toggle'),
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                allChecked ? Icons.clear : Icons.done_all,
+                size: IconSizes.sm,
+                color: colors.primary,
+              ),
+              const SizedBox(width: Spacing.xs),
+              Text(
+                label.toUpperCase(),
+                style: CrudoText.label.copyWith(color: colors.primary),
+              ),
+            ],
           ),
         ),
       ),
     );
+  }
+}
+
+extension on Set<int> {
+  void toggle(int value) {
+    if (contains(value)) {
+      remove(value);
+    } else {
+      add(value);
+    }
   }
 }

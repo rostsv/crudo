@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../themes/colors.dart';
 import '../themes/dimensions.dart';
+import '../themes/dimensions.dart' as dim;
 import '../themes/typography.dart';
 
 /// Full-width primary action: 135° primary→primary-soft gradient, pill radius,
@@ -25,12 +26,16 @@ class PrimaryCta extends StatelessWidget {
       button: true,
       enabled: enabled,
       label: label,
-      child: Opacity(
+      child: AnimatedOpacity(
+        duration: dim.Durations.fast,
+        curve: Curves.easeOut,
         opacity: enabled ? 1 : 0.5,
         child: GestureDetector(
           onTap: enabled ? onPressed : null,
-          child: Container(
+          child: AnimatedContainer(
             key: const ValueKey('primary-cta-surface'),
+            duration: dim.Durations.fast,
+            curve: Curves.easeOut,
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: Spacing.md),
             decoration: BoxDecoration(

@@ -171,6 +171,22 @@ void main() {
     sub.close();
   });
 
+  test('logMeal commits a draft set, persists and re-emits', () async {
+    final c = container();
+    final sub = c.listen(dayControllerProvider(today), (prev, next) {});
+    final day = await c.read(dayControllerProvider(today).future);
+    final mealId = day.meals.first.id;
+    await c.read(dayControllerProvider(today).notifier).logMeal(mealId, {0, 2});
+    await Future<void>.delayed(Duration.zero);
+    final updated = await c.read(dayControllerProvider(today).future);
+    final items = updated.meals.first.meal.items;
+    check(items[0].checked).isTrue();
+    check(items[1].checked).isFalse();
+    check(items[2].checked).isTrue();
+    check(items[3].checked).isFalse();
+    sub.close();
+  });
+
   test('unmarkAll clears checks, persists and re-emits', () async {
     final c = container();
     final sub = c.listen(dayControllerProvider(today), (prev, next) {});

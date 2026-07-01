@@ -127,6 +127,28 @@ abstract class Day with _$Day {
     return _withMeal(meal.copyWith(meal: meal.meal.copyWith(items: items)));
   }
 
+  /// Commits a draft: every item whose index ∈ [checked] is stamped (items
+  /// already checked keep their earlier stamp — mirror markAllEaten); every
+  /// other item is cleared to null. Single transition. Locked/past days reject
+  /// via _ensureUnlocked. Empty [checked] clears all (caller gates this).
+  Day logMeal(String mealId, Set<int> checked, DateTime now, DateTime today) {
+    _ensureUnlocked(today);
+    final meal = _mealById(mealId);
+    final items = meal.meal.items;
+    if (checked.any((i) => i < 0 || i >= items.length)) {
+      throw StateError('checked index out of range for $mealId');
+    }
+    final stamp = now.toUtc();
+    final updated = [
+      for (final (i, item) in items.indexed)
+        if (checked.contains(i))
+          item.checked ? item : item.copyWith(checkedAt: stamp)
+        else
+          item.copyWith(checkedAt: null),
+    ];
+    return _withMeal(meal.copyWith(meal: meal.meal.copyWith(items: updated)));
+  }
+
   /// Explicit skip. Re-skip overwrites the stamp. Skipping an eaten meal is
   /// meaningless — uncheck first (UI pre-checks with canSkipMeal).
   Day skipMeal(String mealId, DateTime now, DateTime today) {

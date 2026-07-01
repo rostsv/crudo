@@ -109,15 +109,18 @@ void main() {
   });
 
   testWidgets(
-    'today: tapping a meal card pushes MealDetailScreen; Mark Done works',
+    'today: tapping a meal card pushes MealDetailScreen; Log meal works',
     (tester) async {
       final c = await pumpToday(tester);
       // Breakfast (08:00) is derived skipped at 09:30 — tap it anyway.
       await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
       await tester.pumpAndSettle();
       expect(find.byType(MealDetailScreen), findsOneWidget);
-      expect(find.text('Mark Done'), findsOneWidget);
-      await tester.tap(find.text('Mark Done'));
+      expect(find.text('Log meal'), findsOneWidget);
+      // Log meal starts disabled (nothing checked yet) — use Check-all.
+      await tester.tap(find.byKey(const ValueKey('check-all-toggle')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log meal'));
       await tester.pumpAndSettle();
       // Popped back to TodayScreen.
       expect(find.byType(TodayScreen), findsOneWidget);
@@ -132,7 +135,9 @@ void main() {
     await tester.tap(find.text('Chicken Rice Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.byType(MealDetailScreen), findsOneWidget);
-    await tester.tap(find.text('Skip'));
+    await tester.tap(find.byKey(const ValueKey('meal-actions')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('action-skip')));
     await tester.pumpAndSettle();
     // Popped back.
     expect(find.byType(TodayScreen), findsOneWidget);
@@ -147,7 +152,9 @@ void main() {
     await tester.tap(find.text('Chicken Rice Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.byType(MealDetailScreen), findsOneWidget);
-    await tester.tap(find.byKey(const ValueKey('tile-snooze')));
+    await tester.tap(find.byKey(const ValueKey('meal-actions')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('action-snooze')));
     await tester.pumpAndSettle();
     expect(find.text('Snooze, then eat.'), findsOneWidget);
     await tester.tap(find.text('Snooze 15m'));
@@ -185,8 +192,8 @@ void main() {
     await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(find.byType(MealDetailScreen), findsOneWidget);
-    // No footer (Mark Done/Skip) on future days.
-    expect(find.text('Mark Done'), findsNothing);
+    // No footer (Log meal/Skip) on future days.
+    expect(find.text('Log meal'), findsNothing);
     // Preview was never persisted.
     final repo = c.read(dayRepositoryProvider);
     expect(await repo.getByDate(DateTime.utc(2026, 6, 5)), isNull);
@@ -207,11 +214,13 @@ void main() {
     // Open the first meal detail (full-screen route, hero hidden behind it).
     await tester.tap(find.text('Protein Oats Bowl'), warnIfMissed: false);
     await tester.pumpAndSettle();
-    // Toggle a single item (does not close the route).
+    // Toggle a single item (draft only — does not close the route or update
+    // the frozen hero).
     await tester.tap(find.byKey(const ValueKey('item-check-0')));
     await tester.pumpAndSettle();
-    // Pop the route — freeze clears in .whenComplete.
-    await tester.tap(find.byIcon(Icons.arrow_back));
+    // Commit the draft; Log meal pops the route and freeze clears in
+    // .whenComplete.
+    await tester.tap(find.text('Log meal'));
     await tester.pumpAndSettle();
     // Now the hero should show the updated kcal.
     final day = await c.read(dayControllerProvider(today).future);

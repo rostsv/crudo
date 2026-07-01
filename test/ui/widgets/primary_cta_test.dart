@@ -32,7 +32,7 @@ void main() {
     await tester.pumpWidget(_wrap(PrimaryCta(label: 'Save', onPressed: () {})));
     final deco =
         tester
-                .widget<Container>(
+                .widget<AnimatedContainer>(
                   find.byKey(const ValueKey('primary-cta-surface')),
                 )
                 .decoration!

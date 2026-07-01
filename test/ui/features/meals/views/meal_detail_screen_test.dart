@@ -56,8 +56,8 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// GoRouter harness — for tests that trigger context.pop() (Mark Done,
-  /// Save Partial, Skip, edit push, swap/done guard).
+  /// GoRouter harness — for tests that trigger context.pop() (Log meal,
+  /// Skip, edit push, swap/done guard).
   Future<void> openWithRouter(
     WidgetTester tester, {
     required DateTime date,
@@ -135,82 +135,163 @@ void main() {
         expect(find.text('TOTAL INTAKE'), findsOneWidget);
         expect(find.byKey(const ValueKey('detail-kcal')), findsOneWidget);
         expect(find.text('Ingredients'), findsOneWidget);
-        expect(find.byKey(const ValueKey('eaten-count')), findsOneWidget);
+        expect(find.byKey(const ValueKey('eaten-count')), findsNothing);
         expect(find.byKey(const ValueKey('item-check-0')), findsWidgets);
         expect(find.byKey(const ValueKey('item-check-3')), findsWidgets);
-        expect(find.byKey(const ValueKey('tile-snooze')), findsOneWidget);
-        expect(find.byKey(const ValueKey('tile-swap')), findsOneWidget);
-        expect(find.text('Mark Done'), findsOneWidget);
-        expect(find.text('Skip'), findsOneWidget);
+        expect(find.text('Log meal'), findsOneWidget);
+        expect(find.byKey(const ValueKey('meal-actions')), findsOneWidget);
+        // Skip is no longer an inline bottom-bar button; it lives in the
+        // actions sheet opened by the kebab.
+        expect(find.text('Skip'), findsNothing);
       },
     );
 
-    testWidgets('today: item tap checks/unchecks; eaten-count updates', (
+    testWidgets('today: item tap toggles draft without persisting', (
       tester,
     ) async {
       await open(tester, date: today);
+      final before = await container.read(dayControllerProvider(today).future);
+      check(before.meals.first.meal.anyChecked).isFalse();
+
       await tester.tap(find.byKey(const ValueKey('item-check-0')));
       await tester.pumpAndSettle();
-      expect(find.text('1 OF 4 EATEN'), findsOneWidget);
+
+      // The circle animates to checked and the progress line fills.
+      final row = find.byKey(const ValueKey('item-check-0'));
+      expect(
+        find.descendant(
+          of: row,
+          matching: find.byKey(const ValueKey('check-icon')),
+        ),
+        findsOneWidget,
+      );
+
+      // Nothing persisted yet: the controller still sees an unchecked meal.
+      final afterTap = await container.read(
+        dayControllerProvider(today).future,
+      );
+      check(afterTap.meals.first.meal.anyChecked).isFalse();
+
+      // Tap again: draft clears.
       await tester.tap(find.byKey(const ValueKey('item-check-0')));
       await tester.pumpAndSettle();
-      expect(find.text('0 OF 4 EATEN'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: row,
+          matching: find.byKey(const ValueKey('check-icon')),
+        ),
+        findsNothing,
+      );
     });
 
-    testWidgets('today: Mark Done marks all and pops', (tester) async {
-      await openWithRouter(tester, date: today);
-      await tester.tap(find.text('Mark Done'));
-      await tester.pumpAndSettle();
-      // After pop, we're back on the launcher — Mark Done gone.
-      expect(find.text('Mark Done'), findsNothing);
-      final day = await container.read(dayControllerProvider(today).future);
-      check(day.meals.first.meal.allChecked).isTrue();
-    });
+    testWidgets(
+      'today: Log meal disabled at zero-checked, enabled after a check, commits on tap',
+      (tester) async {
+        await openWithRouter(tester, date: today);
+        // Zero checked → disabled, tap is a no-op (still on detail screen).
+        await tester.tap(find.text('Log meal'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Log meal'), findsOneWidget);
 
-    testWidgets('today: Save Partial pops, keeps checked state', (
+        await tester.tap(find.byKey(const ValueKey('item-check-0')));
+        await tester.pumpAndSettle();
+
+        // Enabled now — tap commits the draft {0} and pops.
+        await tester.tap(find.text('Log meal'));
+        await tester.pumpAndSettle();
+        expect(find.text('Log meal'), findsNothing);
+        final day = await container.read(dayControllerProvider(today).future);
+        check(day.meals.first.meal.items[0].checked).isTrue();
+        check(day.meals.first.meal.items[1].checked).isFalse();
+        check(day.meals.first.meal.allChecked).isFalse();
+      },
+    );
+
+    testWidgets('today: Log meal enabled when all already checked, pops', (
       tester,
     ) async {
-      await openWithRouter(tester, date: today);
-      await tester.tap(find.byKey(const ValueKey('item-check-0')));
-      await tester.pumpAndSettle();
-      expect(find.text('Save Partial'), findsOneWidget);
-      await tester.tap(find.text('Save Partial'));
-      await tester.pumpAndSettle();
-      expect(find.text('Save Partial'), findsNothing);
-      final day = await container.read(dayControllerProvider(today).future);
-      check(day.meals.first.meal.items.first.checked).isTrue();
-    });
-
-    testWidgets('today: Mark Done when all checked pops', (tester) async {
       await openWithRouter(tester, date: today);
       final day0 = await container.read(dayControllerProvider(today).future);
       await container
           .read(dayControllerProvider(today).notifier)
           .markAllEaten(day0.meals.first.id);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('Mark Done'));
+      await tester.tap(find.text('Log meal'));
       await tester.pumpAndSettle();
-      expect(find.text('Mark Done'), findsNothing);
+      expect(find.text('Log meal'), findsNothing);
     });
 
-    testWidgets('today: Skip skips and pops', (tester) async {
+    testWidgets(
+      'today: Check-all toggle fills/clears draft only; Log meal commits',
+      (tester) async {
+        await openWithRouter(tester, date: today);
+        final day0 = await container.read(dayControllerProvider(today).future);
+        check(day0.meals.first.meal.anyChecked).isFalse();
+
+        await tester.tap(find.byKey(const ValueKey('check-all-toggle')));
+        await tester.pumpAndSettle();
+
+        // UI reflects the full draft.
+        expect(
+          find.descendant(
+            of: find.byType(ListView),
+            matching: find.byKey(const ValueKey('check-icon')),
+          ),
+          findsNWidgets(4),
+        );
+        // Controller is still untouched.
+        final afterCheck = await container.read(
+          dayControllerProvider(today).future,
+        );
+        check(afterCheck.meals.first.meal.anyChecked).isFalse();
+
+        await tester.tap(find.byKey(const ValueKey('check-all-toggle')));
+        await tester.pumpAndSettle();
+
+        // Draft cleared.
+        expect(
+          find.descendant(
+            of: find.byType(ListView),
+            matching: find.byKey(const ValueKey('check-icon')),
+          ),
+          findsNothing,
+        );
+
+        // Check all again, then log to commit.
+        await tester.tap(find.byKey(const ValueKey('check-all-toggle')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Log meal'));
+        await tester.pumpAndSettle();
+        final afterLog = await container.read(
+          dayControllerProvider(today).future,
+        );
+        check(afterLog.meals.first.meal.allChecked).isTrue();
+      },
+    );
+
+    testWidgets('today: Skip from actions sheet skips and pops', (
+      tester,
+    ) async {
       await openWithRouter(tester, date: today);
-      await tester.tap(find.text('Skip'));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('action-skip')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('action-skip')));
       await tester.pumpAndSettle();
       final day = await container.read(dayControllerProvider(today).future);
       check(day.meals.first.skippedAt).isNotNull();
     });
 
-    testWidgets('today: snooze tile opens SnoozeSheet for upcoming meal', (
+    testWidgets('today: snooze action opens SnoozeSheet for upcoming meal', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       await open(tester, date: today, mealId: 'sm-2');
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-snooze')));
+      await tester.tap(find.byKey(const ValueKey('action-snooze')));
       await tester.pumpAndSettle();
       expect(find.text('Snooze, then eat.'), findsOneWidget);
     });
@@ -245,22 +326,22 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('today: swap tile opens SwapSheet for upcoming meal', (
+    testWidgets('today: swap action opens SwapSheet for upcoming meal', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       await open(tester, date: today, mealId: 'sm-2');
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.tap(find.byKey(const ValueKey('action-swap')));
       await tester.pumpAndSettle();
       // The SwapSheet is open — its "From your library" kicker is now visible.
       expect(find.text('FROM YOUR LIBRARY'), findsOneWidget);
     });
 
-    testWidgets('today: swap tile on done meal toasts guard, no sheet', (
+    testWidgets('today: swap action on done meal toasts guard, no sheet', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 1600);
@@ -272,15 +353,15 @@ void main() {
           .read(dayControllerProvider(today).notifier)
           .markAllEaten(day0.meals.first.id);
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.tap(find.byKey(const ValueKey('action-swap')));
       await tester.pumpAndSettle();
       expect(find.text("That can't be changed anymore."), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('today: disabled snooze tile on done meal toasts reason', (
+    testWidgets('today: disabled snooze action on done meal toasts reason', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 1600);
@@ -292,9 +373,9 @@ void main() {
           .read(dayControllerProvider(today).notifier)
           .markAllEaten(day0.meals.first.id);
       await tester.pumpAndSettle();
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-snooze')));
+      await tester.tap(find.byKey(const ValueKey('action-snooze')));
       await tester.pumpAndSettle();
       expect(find.text('Meal is done'), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
@@ -318,10 +399,9 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       await open(tester, date: today, mealId: 'sm-0');
-      // Drag to reveal the swap tile at the bottom.
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.tap(find.byKey(const ValueKey('action-swap')));
       await tester.pumpAndSettle();
 
       // Section headers
@@ -366,9 +446,9 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       await open(tester, date: today, mealId: 'sm-2');
-      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.tap(find.byKey(const ValueKey('action-swap')));
       await tester.pumpAndSettle();
 
       // sm-2 is snack-tagged → SAME TYPE section includes Yogurt & Banana
@@ -389,10 +469,9 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       await open(tester, date: today, mealId: 'sm-0');
-      // Drag to reveal the swap tile at the bottom.
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.tap(find.byKey(const ValueKey('action-swap')));
       await tester.pumpAndSettle();
 
       // Confirm sections visible before search
@@ -438,10 +517,9 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       await open(tester, date: today, mealId: 'sm-0');
-      // Drag to reveal the swap tile at the bottom.
-      await tester.drag(find.byType(ListView), const Offset(0, -400));
+      await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('tile-swap')));
+      await tester.tap(find.byKey(const ValueKey('action-swap')));
       await tester.pumpAndSettle();
 
       // Type a query that matches nothing

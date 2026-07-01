@@ -124,6 +124,44 @@ void main() {
     });
   });
 
+  group('logMeal', () {
+    test('stamps only indices in set and clears the rest', () {
+      final d = day(checkedOf2: 1).logMeal('lunch', {1}, now, today);
+      final lunch = d.meals[1];
+      check(lunch.meal.items[0].checkedAt).isNull();
+      check(lunch.meal.items[1].checkedAt).equals(now.toUtc());
+    });
+    test('keeps existing stamps for already-checked items in set', () {
+      final before = day(checkedOf2: 1);
+      final original = before.meals[1].meal.items[0].checkedAt;
+      final d = before.logMeal('lunch', {0}, now, today);
+      final lunch = d.meals[1];
+      check(lunch.meal.items[0].checkedAt).equals(original);
+      check(lunch.meal.items[1].checkedAt).isNull();
+    });
+    test('empty set clears every stamp', () {
+      final d = day(checkedOf2: 2).logMeal('lunch', {}, now, today);
+      final lunch = d.meals[1];
+      check(lunch.meal.items[0].checkedAt).isNull();
+      check(lunch.meal.items[1].checkedAt).isNull();
+    });
+    test('out-of-range index throws', () {
+      check(() => day().logMeal('lunch', {2}, now, today)).throws<StateError>();
+      check(
+        () => day().logMeal('lunch', {-1}, now, today),
+      ).throws<StateError>();
+    });
+    test('unknown meal id throws', () {
+      check(() => day().logMeal('nope', {0}, now, today)).throws<StateError>();
+    });
+    test('rejects on a locked day', () {
+      final tomorrow = DateTime.utc(2026, 6, 5);
+      check(
+        () => day().logMeal('lunch', {0}, now, tomorrow),
+      ).throws<StateError>();
+    });
+  });
+
   group('skipMeal', () {
     test('stamps UTC; re-skip overwrites', () {
       final d1 = day().skipMeal('lunch', now, today);

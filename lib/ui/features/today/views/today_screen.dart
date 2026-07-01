@@ -13,6 +13,7 @@ import '../../../core/formatting.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
+import '../../../core/widgets/confirm_sheet.dart';
 import '../../../core/widgets/meal_card.dart';
 import '../view_models/day_controller.dart';
 import '../view_models/intake_freeze.dart';
@@ -193,11 +194,18 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                         },
                         onStatusTap: !isToday
                             ? null
-                            : () {
+                            : () async {
                                 final ctrl = ref.read(
                                   dayControllerProvider(selected).notifier,
                                 );
-                                runDayOp(
+                                if (status == MealStatus.done) {
+                                  final confirmed =
+                                      await showUndoMealConfirmSheet(context);
+                                  if (confirmed != true || !context.mounted) {
+                                    return;
+                                  }
+                                }
+                                await runDayOp(
                                   context,
                                   () => status == MealStatus.done
                                       ? ctrl.unmarkAll(meal.id)

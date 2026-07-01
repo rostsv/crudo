@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,7 @@ import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/dimensions.dart' as dim;
 import '../../../core/themes/typography.dart';
+import '../../../core/widgets/confirm_sheet.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
 import '../../../core/widgets/sheet_actions.dart';
@@ -137,6 +139,8 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
       _draft = _persistedChecked(meal.meal);
     }
     final draft = _draft!;
+    final persistedChecked = _persistedChecked(meal.meal);
+    final canLog = !setEquals(draft, persistedChecked);
 
     final snoozedLabel =
         meal.snoozedUntil != null &&
@@ -280,13 +284,27 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
                     Expanded(
                       child: PrimaryCta(
                         label: 'Log meal',
-                        enabled: draft.isNotEmpty,
-                        onPressed: draft.isNotEmpty
-                            ? () => _run(
-                                context,
-                                () => ctrl.logMeal(widget.mealId, draft),
-                                pop: true,
-                              )
+                        enabled: canLog,
+                        onPressed: canLog
+                            ? () async {
+                                final wouldUndoDone =
+                                    meal.meal.allChecked &&
+                                    draft.length < items.length;
+                                if (wouldUndoDone) {
+                                  final confirmed =
+                                      await showModifyDoneMealConfirmSheet(
+                                        context,
+                                      );
+                                  if (confirmed != true || !context.mounted) {
+                                    return;
+                                  }
+                                }
+                                await _run(
+                                  context,
+                                  () => ctrl.logMeal(widget.mealId, draft),
+                                  pop: true,
+                                );
+                              }
                             : null,
                       ),
                     ),

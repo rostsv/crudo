@@ -271,11 +271,31 @@ void main() {
     },
   );
 
-  testWidgets('second circle tap undoes a done meal (status back)', (
+  testWidgets(
+    'second circle tap on done meal shows undo confirm; Undo clears it',
+    (tester) async {
+      final c = await pumpToday(tester);
+      // Complete then undo the first meal.
+      await tester.tap(statusCircle('Protein Oats Bowl', 'skipped'));
+      await tester.pumpAndSettle();
+      final day1 = await c.read(dayControllerProvider(today).future);
+      expect(day1.meals.first.meal.allChecked, isTrue);
+
+      await tester.tap(statusCircle('Protein Oats Bowl', 'done'));
+      await tester.pumpAndSettle();
+      expect(find.text('Undo this meal?'), findsOneWidget);
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+      expect(find.text('Undo this meal?'), findsNothing);
+      final day2 = await c.read(dayControllerProvider(today).future);
+      expect(day2.meals.first.meal.anyChecked, isFalse);
+    },
+  );
+
+  testWidgets('undo confirm Cancel leaves the done meal unchanged', (
     tester,
   ) async {
     final c = await pumpToday(tester);
-    // Complete then undo the first meal.
     await tester.tap(statusCircle('Protein Oats Bowl', 'skipped'));
     await tester.pumpAndSettle();
     final day1 = await c.read(dayControllerProvider(today).future);
@@ -283,8 +303,12 @@ void main() {
 
     await tester.tap(statusCircle('Protein Oats Bowl', 'done'));
     await tester.pumpAndSettle();
+    expect(find.text('Undo this meal?'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(find.text('Undo this meal?'), findsNothing);
     final day2 = await c.read(dayControllerProvider(today).future);
-    expect(day2.meals.first.meal.anyChecked, isFalse);
+    expect(day2.meals.first.meal.allChecked, isTrue);
   });
 
   testWidgets('circle tap on a skipped meal completes it', (tester) async {

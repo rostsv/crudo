@@ -207,19 +207,68 @@ void main() {
       },
     );
 
-    testWidgets('today: Log meal enabled when all already checked, pops', (
-      tester,
-    ) async {
-      await openWithRouter(tester, date: today);
-      final day0 = await container.read(dayControllerProvider(today).future);
-      await container
-          .read(dayControllerProvider(today).notifier)
-          .markAllEaten(day0.meals.first.id);
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Log meal'));
-      await tester.pumpAndSettle();
-      expect(find.text('Log meal'), findsNothing);
-    });
+    testWidgets(
+      'today: Log meal disabled when draft matches persisted, enabled on change',
+      (tester) async {
+        await openWithRouter(tester, date: today);
+        final day0 = await container.read(dayControllerProvider(today).future);
+        final mealId = day0.meals.first.id;
+        await container
+            .read(dayControllerProvider(today).notifier)
+            .markAllEaten(mealId);
+        await tester.pumpAndSettle();
+
+        // Re-opened a done meal: draft equals persisted → disabled.
+        await tester.tap(find.text('Log meal'), warnIfMissed: false);
+        await tester.pumpAndSettle();
+        expect(find.text('Log meal'), findsOneWidget);
+
+        // Uncheck one box: draft differs from persisted → enabled.
+        await tester.tap(find.byKey(const ValueKey('item-check-0')));
+        await tester.pumpAndSettle();
+
+        // Reducing a done meal prompts for confirmation.
+        await tester.tap(find.text('Log meal'));
+        await tester.pumpAndSettle();
+        expect(find.text('Modify this meal?'), findsOneWidget);
+        await tester.tap(find.text('Modify'));
+        await tester.pumpAndSettle();
+        expect(find.text('Log meal'), findsNothing);
+        final day1 = await container.read(dayControllerProvider(today).future);
+        final meal = day1.meals.firstWhere((m) => m.id == mealId);
+        check(meal.meal.items[0].checked).isFalse();
+        check(meal.meal.items[1].checked).isTrue();
+      },
+    );
+
+    testWidgets(
+      'today: undo confirm on detail Cancel aborts and leaves meal done',
+      (tester) async {
+        await openWithRouter(tester, date: today);
+        final day0 = await container.read(dayControllerProvider(today).future);
+        final mealId = day0.meals.first.id;
+        await container
+            .read(dayControllerProvider(today).notifier)
+            .markAllEaten(mealId);
+        await tester.pumpAndSettle();
+
+        // Reduce the draft.
+        await tester.tap(find.byKey(const ValueKey('item-check-0')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Log meal'));
+        await tester.pumpAndSettle();
+        expect(find.text('Modify this meal?'), findsOneWidget);
+
+        // Cancel: stay on detail, persisted state untouched.
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+        expect(find.text('Modify this meal?'), findsNothing);
+        expect(find.text('Log meal'), findsOneWidget);
+        final day1 = await container.read(dayControllerProvider(today).future);
+        final meal = day1.meals.firstWhere((m) => m.id == mealId);
+        check(meal.meal.allChecked).isTrue();
+      },
+    );
 
     testWidgets(
       'today: Check-all toggle fills/clears draft only; Log meal commits',

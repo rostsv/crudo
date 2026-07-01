@@ -19,13 +19,19 @@ class MacroTotalCard extends StatelessWidget {
     required this.label,
     this.gradient = false,
     this.footer,
+    this.footerBelow,
     super.key,
   });
 
   final Macros macros;
   final String label;
   final bool gradient;
+
+  /// Slot inside the left column, under the kcal hero (meal-detail tags).
   final Widget? footer;
+
+  /// Full-width slot below the kcal+macros row (plan editor weekday strip).
+  final Widget? footerBelow;
 
   @override
   Widget build(BuildContext context) {
@@ -58,61 +64,80 @@ class MacroTotalCard extends StatelessWidget {
             : null,
         borderRadius: Radii.all(Radii.lg),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Left: label + kcal hero + footer (tags) filling the space below.
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: CrudoText.label.copyWith(color: mutedOnCard),
-                ),
-                const SizedBox(height: Spacing.sm),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
+          Row(
+            // No left footer (plan target) → center the kcal hero against the
+            // taller macro tile. With a footer (meal tags) keep top-aligned.
+            crossAxisAlignment: footer == null
+                ? CrossAxisAlignment.center
+                : CrossAxisAlignment.start,
+            children: [
+              // Left: label + kcal hero + footer (tags) filling the space below.
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '${macros.kcal.round()}',
-                      key: const ValueKey('detail-kcal'),
-                      style: CrudoText.display.copyWith(color: onCard),
+                      label,
+                      style: CrudoText.label.copyWith(color: mutedOnCard),
                     ),
-                    const SizedBox(width: Spacing.sm),
-                    Text(
-                      'kcal',
-                      style: CrudoText.body.copyWith(color: mutedOnCard),
+                    const SizedBox(height: Spacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '${macros.kcal.round()}',
+                          key: const ValueKey('detail-kcal'),
+                          style: CrudoText.display.copyWith(color: onCard),
+                        ),
+                        const SizedBox(width: Spacing.sm),
+                        Text(
+                          'kcal',
+                          style: CrudoText.body.copyWith(color: mutedOnCard),
+                        ),
+                      ],
                     ),
+                    if (footer != null) ...[
+                      const SizedBox(height: Spacing.md),
+                      footer!,
+                    ],
                   ],
                 ),
-                if (footer != null) ...[
-                  const SizedBox(height: Spacing.md),
-                  footer!,
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: Spacing.md),
-          // Right: one tile with a color-barred strip per macro.
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(Spacing.md),
-              decoration: BoxDecoration(
-                color: tileColor,
-                borderRadius: Radii.all(Radii.md),
               ),
-              child: Column(
-                children: [
-                  for (final (i, (name, value, accent)) in rows.indexed) ...[
-                    if (i > 0) const SizedBox(height: Spacing.sm),
-                    _MacroStrip(label: name, grams: value, barColor: accent),
-                  ],
-                ],
+              const SizedBox(width: Spacing.md),
+              // Right: one tile with a color-barred strip per macro.
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(Spacing.md),
+                  decoration: BoxDecoration(
+                    color: tileColor,
+                    borderRadius: Radii.all(Radii.md),
+                  ),
+                  child: Column(
+                    children: [
+                      for (final (i, (name, value, accent))
+                          in rows.indexed) ...[
+                        if (i > 0) const SizedBox(height: Spacing.sm),
+                        _MacroStrip(
+                          label: name,
+                          grams: value,
+                          barColor: accent,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
+          if (footerBelow != null) ...[
+            const SizedBox(height: Spacing.lg),
+            footerBelow!,
+          ],
         ],
       ),
     );

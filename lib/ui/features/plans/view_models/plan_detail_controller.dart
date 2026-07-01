@@ -1,6 +1,7 @@
 import 'package:crudo/config/di.dart';
 import 'package:crudo/data/services/id_generator.dart';
 import 'package:crudo/domain/food/food.dart';
+import 'package:crudo/domain/food/food_ref.dart';
 import 'package:crudo/domain/meal/meal_template.dart';
 import 'package:crudo/domain/plan/plan_slot.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
@@ -9,6 +10,8 @@ import 'package:crudo/domain/services/nutrition.dart';
 import 'package:crudo/domain/services/plan_scheduling.dart';
 import 'package:crudo/domain/shared/macros.dart';
 import 'package:crudo/domain/shared/meal_time.dart';
+import 'package:crudo/ui/features/meals/views/formatting.dart'
+    show mealTagLabels;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import 'plan_draft.dart';
@@ -138,6 +141,35 @@ class PlanDetailController extends _$PlanDetailController {
   /// T5: Look up a template by id (for duplicate flow).
   MealTemplate? templateById(String id) => _templatesById[id];
 
+  /// Resolve a draft slot into the read-only [PlanSlotView] shape (tag + macros
+  /// + ingredient list) from the cached template + foods, so the editor's
+  /// quick-info sheet renders identically to the plan viewer.
+  PlanSlotView slotView(PlanSlotDraft s) {
+    final mt = _templatesById[s.mealTemplateId];
+    final macros = mt == null
+        ? const Macros()
+        : mealTemplateMacros(mt, _foodsById);
+    final tag = mt == null || mt.tags.isEmpty
+        ? ''
+        : mt.tags.map((t) => mealTagLabels[t]).join(' · ');
+    final ingredients = <PlanIngredientView>[
+      for (final fr in mt?.foods ?? const <FoodRef>[])
+        if (_foodsById[fr.foodId] case final food?)
+          (
+            name: food.name,
+            grams: fr.grams.value,
+            kcal: macrosForFood(food, fr.grams.value).kcal,
+          ),
+    ];
+    return (
+      time: s.time,
+      mealName: mt?.name ?? 'Unknown meal',
+      tag: tag,
+      macros: macros,
+      ingredients: ingredients,
+    );
+  }
+
   void removeSlot(int i) => _mutate((d) => d.removeSlot(i));
   void setSlotTime(int i, MealTime t) => _mutate((d) => d.setSlotTime(i, t));
   void reorderSlots(int from, int to) =>
@@ -226,12 +258,14 @@ class PlanDetailController extends _$PlanDetailController {
     );
   }
 
-  /// Returns false (no-op) when this is the last plan — the ≥1-plan invariant
-  /// (S09 `canDeletePlan`) lives here, not in the widget. True after deleting.
-  /// Only available in edit mode (no-op in create mode).
+  /// Returns false (no-op) when deleting would leave a weekday uncovered by the
+  /// remaining active plans (`canDeletePlan`) — the invariant lives here, not
+  /// in the widget. True after deleting. No-op in create mode.
   Future<bool> delete() async {
     if (_original == null) return false;
-    if (!canDeletePlan(await _repo.getAll())) return false;
+    if (!canDeletePlan(await _repo.getAll(), deletingId: _original!.id)) {
+      return false;
+    }
     await _repo.delete(_original!.id);
     return true;
   }

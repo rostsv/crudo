@@ -3,17 +3,25 @@ import 'package:flutter/material.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart' as dim;
 import '../../../core/themes/typography.dart';
+import '../../../core/widgets/crudo_toggle.dart';
 import '../../../core/widgets/macro_chip.dart';
 import '../view_models/plan_draft.dart';
 
-/// One row in the plans list. An eyebrow (`GOAL · KCAL · ACTIVE`) sits above
-/// the name; below it a meta line (meal count + kcal + P/C/F macro dots) and a
-/// full-width weekday strip. A trailing chevron marks the card as navigable.
+/// One row in the plans list. An eyebrow (`ACTIVE · N MEALS`) with a quick
+/// pause/resume toggle sits above the name; below it a meta line (kcal + P/C/F
+/// macro dots) and a full-width weekday strip. A trailing chevron marks the
+/// card as navigable; tapping the toggle pauses/resumes without opening it.
 class PlanListCard extends StatelessWidget {
-  const PlanListCard({required this.row, required this.onTap, super.key});
+  const PlanListCard({
+    required this.row,
+    required this.onTap,
+    required this.onToggleActive,
+    super.key,
+  });
 
   final PlanRowVm row;
   final VoidCallback onTap;
+  final VoidCallback onToggleActive;
 
   @override
   Widget build(BuildContext context) {
@@ -61,10 +69,10 @@ class PlanListCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: dim.Spacing.sm),
-                  Icon(
-                    Icons.chevron_right,
-                    size: dim.IconSizes.md,
-                    color: colors.onSurfaceVar,
+                  CrudoToggle(
+                    key: ValueKey('plan-active-${row.id}'),
+                    value: row.active,
+                    onChanged: (_) => onToggleActive(),
                   ),
                 ],
               ),

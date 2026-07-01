@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../data/services/id_generator.dart';
+import '../../../../domain/plan/plan_template.dart';
+import '../../../../domain/services/plan_scheduling.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
+import '../../../core/widgets/sheet.dart';
+import '../../../core/widgets/sheet_actions.dart';
+import '../view_models/plan_activation.dart';
+import '../view_models/plan_draft.dart';
 import '../view_models/plans_list.dart';
+import 'coverage_resolution_sheet.dart';
 import 'plan_list_card.dart';
 
 /// S10 plans list screen. `LIBRARY` eyebrow + title, a top-right circular add
@@ -93,12 +101,113 @@ class PlansScreen extends ConsumerWidget {
                         child: PlanListCard(
                           row: row,
                           onTap: () => context.push('/plans/${row.id}'),
+                          onToggleActive: () =>
+                              _toggleActive(context, ref, row),
                         ),
                       );
                     },
                   ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Quick pause/resume from a card. Pausing that would uncover weekdays opens
+  /// the coverage-resolution sheet first (assign the days to another plan or
+  /// create one). Resuming that would clash opens the steal-override confirm.
+  Future<void> _toggleActive(
+    BuildContext context,
+    WidgetRef ref,
+    PlanRowVm row,
+  ) async {
+    final ctrl = ref.read(planActivationProvider.notifier);
+    if (row.active) {
+      final orphaned = await ctrl.daysOrphanedByPausing(row.id);
+      if (!context.mounted) return;
+      if (orphaned.isEmpty) {
+        await ctrl.pause(row.id);
+        return;
+      }
+      final candidates = await ctrl.otherActivePlans(row.id);
+      if (!context.mounted) return;
+      final choice = await showCoverageResolutionSheet(
+        context,
+        orphanedDays: orphaned,
+        candidates: candidates,
+      );
+      if (choice == null) return; // cancelled — stays active
+      if (choice.create) {
+        // Free the days, then open a new plan pre-filled with them.
+        await ctrl.pause(row.id);
+        if (!context.mounted) return;
+        final seed = PlanTemplate(
+          id: ref.read(idGeneratorProvider).newId(),
+          name: '',
+          days: orphaned,
+        );
+        context.push('/plans/new', extra: seed);
+      } else {
+        await ctrl.assignDaysAndPause(
+          row.id,
+          toPlanId: choice.assignToId!,
+          days: orphaned,
+        );
+      }
+      return;
+    }
+    final conflicts = await ctrl.resumeConflicts(row.id);
+    if (!context.mounted) return;
+    if (conflicts.isEmpty) {
+      await ctrl.resume(row.id);
+      return;
+    }
+    final ok = await _confirmResumeOverride(context, conflicts);
+    if (ok == true) await ctrl.resume(row.id, override: true);
+  }
+
+  Future<bool?> _confirmResumeOverride(
+    BuildContext context,
+    List<WeekdayConflict> conflicts,
+  ) {
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final groups = <String, (String name, List<int> days)>{};
+    for (final c in conflicts) {
+      final entry = groups.putIfAbsent(
+        c.otherPlanId,
+        () => (c.otherPlanName, <int>[]),
+      );
+      entry.$2.add(c.weekday);
+    }
+    return showCrudoSheet<bool>(
+      context,
+      builder: (sheetCtx) => SheetScaffold(
+        title: 'Weekday conflict',
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (final entry in groups.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.sm),
+                child: Text(
+                  '${entry.$1} loses '
+                  '${entry.$2.map((d) => names[d]).join(', ')}',
+                  style: CrudoText.body,
+                ),
+              ),
+            const SizedBox(height: Spacing.sm),
+            SheetActionRow(
+              icon: Icons.sync_alt,
+              label: 'Resolve conflict',
+              onTap: () => Navigator.of(sheetCtx).pop(true),
+            ),
+          ],
+        ),
+        cta: SecondaryAction(
+          label: 'Cancel',
+          onTap: () => Navigator.of(sheetCtx).pop(false),
+        ),
       ),
     );
   }

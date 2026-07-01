@@ -145,132 +145,114 @@ void main() {
   }
 
   group('PlanDetailScreen', () {
-    testWidgets('renders name, 7 chips, active switch, slot rows', (
-      tester,
-    ) async {
+    testWidgets('renders name, 7 chips, slot rows', (tester) async {
       await openWithRouter(tester, plans: [planA, planB]);
 
-      // Name appears in both the header Text and the TextField;
-      // assert at least one visible widget.
+      // Name lives in the TextField now (header shows the static title).
       expect(find.text('Workout Plan'), findsWidgets);
       expect(find.byKey(const ValueKey('day-chip-0')), findsOneWidget);
       expect(find.byKey(const ValueKey('day-chip-6')), findsOneWidget);
-      expect(find.byKey(const ValueKey('active-switch')), findsOneWidget);
       expect(find.byKey(const ValueKey('s1')), findsOneWidget);
       expect(find.text('Breakfast'), findsOneWidget);
       expect(find.text('08:00'), findsOneWidget);
 
-      // Active switch should be on
-      final switchWidget = tester.widget<Switch>(
-        find.byKey(const ValueKey('active-switch')),
-      );
-      check(switchWidget.value).isTrue();
+      // Active/pause moved to the Plans card — no switch in the editor.
+      expect(find.byKey(const ValueKey('active-switch')), findsNothing);
     });
 
-    testWidgets(
-      'tapping Wed chip selects it and shows conflict + banner with Rest Day',
-      (tester) async {
-        await openWithRouter(tester, plans: [planA, planB]);
-
-        // Tap Wed (index 2)
-        await tester.tap(find.byKey(const ValueKey('day-chip-2')));
-        await tester.pumpAndSettle();
-
-        // Chip should be selected
-        final chip = tester.widget<PlanDayChip>(
-          find.byKey(const ValueKey('day-chip-2')),
-        );
-        check(chip.selected).isTrue();
-
-        // Banner should show conflict with Rest Day
-        expect(find.textContaining('Rest Day'), findsOneWidget);
-      },
-    );
-
-    testWidgets(
-      'Save with conflict opens Override sheet; Cancel leaves B unchanged',
-      (tester) async {
-        await openWithRouter(tester, plans: [planA, planB]);
-
-        // Select Wed (conflicts with B)
-        await tester.tap(find.byKey(const ValueKey('day-chip-2')));
-        await tester.pumpAndSettle();
-
-        // Tap Save
-        await tester.tap(find.byKey(const ValueKey('save-plan')));
-        await tester.pumpAndSettle();
-
-        // Override sheet should appear
-        expect(find.text('Override existing plans?'), findsOneWidget);
-        expect(find.textContaining('Rest Day loses Wed'), findsOneWidget);
-
-        // Tap Cancel
-        await tester.tap(find.text('Cancel'));
-        await tester.pumpAndSettle();
-
-        // Sheet dismissed, back on detail screen
-        expect(find.text('Override existing plans?'), findsNothing);
-
-        // Verify B still claims Wednesday
-        final container = tester.widget<UncontrolledProviderScope>(
-          find.byType(UncontrolledProviderScope),
-        );
-        final repo = container.container.read(planTemplateRepositoryProvider);
-        final all = await repo.getAll();
-        final b = all.firstWhere((p) => p.id == 'B');
-        check(b.days).deepEquals([2]);
-      },
-    );
-
-    testWidgets(
-      'turning active switch off clears conflict outline while Wed stays selected',
-      (tester) async {
-        await openWithRouter(tester, plans: [planA, planB]);
-
-        // Select Wed
-        await tester.tap(find.byKey(const ValueKey('day-chip-2')));
-        await tester.pumpAndSettle();
-
-        // Conflict banner should be visible
-        expect(find.textContaining('Rest Day'), findsOneWidget);
-
-        // Turn active switch off
-        await tester.tap(find.byKey(const ValueKey('active-switch')));
-        await tester.pumpAndSettle();
-
-        // Banner should be gone (no active conflicts)
-        expect(find.textContaining('Rest Day'), findsNothing);
-
-        // Wed chip should still be selected
-        final chip = tester.widget<PlanDayChip>(
-          find.byKey(const ValueKey('day-chip-2')),
-        );
-        check(chip.selected).isTrue();
-      },
-    );
-
-    testWidgets('delete with only one plan shows toast guard', (tester) async {
-      await openWithRouter(tester, plans: [planA]);
-      await tester.tap(find.text('Delete plan'));
-      await tester.pumpAndSettle();
-
-      expect(find.text("Can't delete your only plan"), findsOneWidget);
-      // Dismiss toast timer to avoid pending-timer failure
-      await tester.pump(const Duration(seconds: 5));
-    });
-
-    testWidgets('delete with two plans shows confirm sheet', (tester) async {
+    testWidgets('selecting a day just toggles it — no conflict banner', (
+      tester,
+    ) async {
       await openWithRouter(tester, plans: [planA, planB]);
-      await tester.tap(find.text('Delete plan'));
+
+      // Tap Wed (index 2) — clashes with Rest Day, but nothing surfaces here.
+      await tester.tap(find.byKey(const ValueKey('day-chip-2')));
       await tester.pumpAndSettle();
 
-      expect(find.text('Delete plan?'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
+      final chip = tester.widget<PlanDayChip>(
+        find.byKey(const ValueKey('day-chip-2')),
+      );
+      check(chip.selected).isTrue();
 
-      // Cancel the delete
+      // Collisions are validated on Save, not on day-select.
+      expect(find.textContaining('Rest Day'), findsNothing);
+      expect(find.text('Weekday conflict'), findsNothing);
+    });
+
+    testWidgets('Save with clash opens the conflict sheet; Cancel is a no-op', (
+      tester,
+    ) async {
+      await openWithRouter(tester, plans: [planA, planB]);
+
+      // Select Wed (clashes with B on save).
+      await tester.tap(find.byKey(const ValueKey('day-chip-2')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const ValueKey('save-plan')));
+      await tester.pumpAndSettle();
+
+      // Conflict sheet with both resolution options.
+      expect(find.text('Weekday conflict'), findsOneWidget);
+      expect(find.textContaining('Rest Day loses Wed'), findsOneWidget);
+      expect(find.text('Resolve conflict'), findsOneWidget);
+      expect(find.text('Save as paused'), findsOneWidget);
+
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
-      expect(find.text('Delete plan?'), findsNothing);
+      expect(find.text('Weekday conflict'), findsNothing);
+
+      // B still claims Wednesday (nothing committed).
+      final container = tester.widget<UncontrolledProviderScope>(
+        find.byType(UncontrolledProviderScope),
+      );
+      final repo = container.container.read(planTemplateRepositoryProvider);
+      final all = await repo.getAll();
+      final b = all.firstWhere((p) => p.id == 'B');
+      check(b.days).deepEquals([2]);
+    });
+
+    testWidgets('Resolve conflict steals the day from the other plan', (
+      tester,
+    ) async {
+      await openWithRouter(tester, plans: [planA, planB]);
+
+      await tester.tap(find.byKey(const ValueKey('day-chip-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-plan')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Resolve conflict'));
+      await tester.pumpAndSettle();
+
+      final container = tester.widget<UncontrolledProviderScope>(
+        find.byType(UncontrolledProviderScope),
+      );
+      final repo = container.container.read(planTemplateRepositoryProvider);
+      final all = await repo.getAll();
+      // A committed active with Wed; B lost Wed.
+      final b = all.firstWhere((p) => p.id == 'B');
+      check(b.days).deepEquals(const []);
+    });
+
+    testWidgets('Save as paused commits the plan inactive', (tester) async {
+      await openWithRouter(tester, plans: [planA, planB]);
+
+      await tester.tap(find.byKey(const ValueKey('day-chip-2')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('save-plan')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save as paused'));
+      await tester.pumpAndSettle();
+
+      final container = tester.widget<UncontrolledProviderScope>(
+        find.byType(UncontrolledProviderScope),
+      );
+      final repo = container.container.read(planTemplateRepositoryProvider);
+      final all = await repo.getAll();
+      final a = all.firstWhere((p) => p.id == 'A');
+      check(a.active).isFalse();
+      // B keeps Wed — the paused plan claims nothing.
+      final b = all.firstWhere((p) => p.id == 'B');
+      check(b.days).deepEquals([2]);
     });
 
     testWidgets(
@@ -315,7 +297,7 @@ void main() {
   });
 
   group('PlanDetailScreen — create mode', () {
-    testWidgets('create mode shows NO active/delete/duplicate; Save disabled', (
+    testWidgets('create mode: New plan title, blank name, no active/actions', (
       tester,
     ) async {
       await openWithRouter(tester, plans: [], planId: null);
@@ -329,21 +311,52 @@ void main() {
       );
       check(nameField.controller?.text).equals('');
 
-      // Save button is disabled (no name, no slots)
+      // Save button is always present (validation happens on tap).
       final saveBtn = tester.widget<PrimaryCta>(
         find.byKey(const ValueKey('save-plan')),
       );
-      check(saveBtn.onPressed).isNull();
+      check(saveBtn.onPressed).isNotNull();
 
-      // Active switch NOT in create mode
+      // No active switch, no delete/duplicate.
       expect(find.byKey(const ValueKey('active-switch')), findsNothing);
-
-      // No delete or duplicate
       expect(find.text('Delete plan'), findsNothing);
       expect(find.text('Duplicate'), findsNothing);
 
       // No meals text
       expect(find.text('No meals scheduled'), findsOneWidget);
+
+      // No errors before a save attempt.
+      expect(find.text('Add a plan name'), findsNothing);
+      expect(find.text('Add at least one meal'), findsNothing);
+    });
+
+    testWidgets('Save with empty name + no meals surfaces inline errors', (
+      tester,
+    ) async {
+      await openWithRouter(tester, plans: [], planId: null);
+
+      await tester.tap(find.byKey(const ValueKey('save-plan')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add a plan name'), findsOneWidget);
+      expect(find.text('Add at least one meal'), findsOneWidget);
+    });
+
+    testWidgets('name error clears once a name is entered', (tester) async {
+      await openWithRouter(tester, plans: [], planId: null);
+
+      await tester.tap(find.byKey(const ValueKey('save-plan')));
+      await tester.pumpAndSettle();
+      expect(find.text('Add a plan name'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const ValueKey('plan-name-field')),
+        'My Plan',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Add a plan name'), findsNothing);
+      // Meals error still stands (no slots yet).
+      expect(find.text('Add at least one meal'), findsOneWidget);
     });
 
     testWidgets('add slot via controller adds a slot row with default time', (
@@ -377,37 +390,41 @@ void main() {
       expect(find.byKey(const ValueKey('add-meal')), findsOneWidget);
     });
 
-    testWidgets(
-      'entering name + adding slot enables Save; back discards silently',
-      (tester) async {
-        await openWithRouter(tester, plans: [], planId: null);
+    testWidgets('name + a slot + full week saves and pops', (tester) async {
+      await openWithRouter(tester, plans: [], planId: null);
 
-        // Enter a name
-        await tester.enterText(
-          find.byKey(const ValueKey('plan-name-field')),
-          'My Plan',
-        );
-        await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('plan-name-field')),
+        'My Plan',
+      );
+      await tester.pumpAndSettle();
 
-        // Add a slot via controller
-        final container = tester.widget<UncontrolledProviderScope>(
-          find.byType(UncontrolledProviderScope),
-        );
-        final ctrl = container.container.read(
-          planDetailControllerProvider(null).notifier,
-        );
-        ctrl.addSlot('mt1');
-        await tester.pump();
+      final container = tester.widget<UncontrolledProviderScope>(
+        find.byType(UncontrolledProviderScope),
+      );
+      final ctrl = container.container.read(
+        planDetailControllerProvider(null).notifier,
+      );
+      ctrl.addSlot('mt1');
+      // Cover the whole week so the "uncovered days" advisory doesn't fire.
+      for (var i = 0; i < 7; i++) {
+        await tester.tap(find.byKey(ValueKey('day-chip-$i')));
+      }
+      await tester.pumpAndSettle();
 
-        // Save should be enabled (name + >=1 slot)
-        final saveBtn = tester.widget<PrimaryCta>(
-          find.byKey(const ValueKey('save-plan')),
-        );
-        check(saveBtn.onPressed).isNotNull();
-      },
-    );
+      await tester.tap(find.byKey(const ValueKey('save-plan')));
+      await tester.pumpAndSettle();
 
-    testWidgets('macro preview card shows kcal and goal', (tester) async {
+      // Committed with no conflict → popped back to the launcher.
+      expect(find.text('open'), findsOneWidget);
+      final all = await container.container
+          .read(planTemplateRepositoryProvider)
+          .getAll();
+      final int count = all.where((p) => p.name == 'My Plan').length;
+      check(count).equals(1);
+    });
+
+    testWidgets('DAILY TARGET card shows summed kcal', (tester) async {
       await openWithRouter(tester, plans: [], planId: null);
 
       // Add a slot so there's macro data
@@ -420,41 +437,10 @@ void main() {
       ctrl.addSlot('mt1');
       await tester.pump();
 
-      // Macro preview shows the kcal
+      // The tonal DAILY TARGET card shows the summed kcal.
       // mt1 = Chicken 100g = 165 kcal
+      expect(find.text('DAILY TARGET'), findsOneWidget);
       expect(find.text('165'), findsOneWidget);
-      expect(find.text('KCAL'), findsOneWidget);
-      // Default goal is maintain
-      expect(find.text('MAINTAIN'), findsOneWidget);
     });
-  });
-
-  group('PlanDetailScreen — edit mode Duplicate', () {
-    testWidgets('Duplicate button present in edit mode, not in create', (
-      tester,
-    ) async {
-      await openWithRouter(tester, plans: [planA], planId: 'A');
-
-      expect(find.byKey(const ValueKey('duplicate-plan')), findsOneWidget);
-    });
-
-    testWidgets(
-      'tapping Duplicate seeds a clone: "copy" name, weekdays cleared',
-      (tester) async {
-        await openWithRouter(tester, plans: [planA, planB], planId: 'A');
-
-        await tester.tap(find.byKey(const ValueKey('duplicate-plan')));
-        await tester.pumpAndSettle();
-
-        // Landed on the seeded create screen: clonePlan ran (name "X copy",
-        // days cleared) — not a raw copy of the original (which kept its days).
-        expect(find.text('Workout Plan copy'), findsWidgets);
-        // The original's Monday (index 0) chip must NOT be selected on the clone.
-        final monChip = tester.widget<PlanDayChip>(
-          find.byKey(const ValueKey('day-chip-0')),
-        );
-        expect(monChip.selected, isFalse);
-      },
-    );
   });
 }

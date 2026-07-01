@@ -230,9 +230,11 @@ void main() {
   });
 
   group('PlanDetailController.delete', () {
-    test('refuses the last plan; deletes when more than one', () async {
+    test('refuses when it would leave the week uncovered; deletes when the '
+        'remaining active plans still cover every day', () async {
+      // Sole plan covering the week → cannot delete.
       final c1 = await createContainer([
-        plan('A', days: [0]),
+        plan('A', days: [0, 1, 2, 3, 4, 5, 6]),
       ]);
       addTearDown(c1.dispose);
       await c1.read(planDetailControllerProvider('A').future);
@@ -242,9 +244,10 @@ void main() {
       check(deletedLast).isFalse();
       check(await repoOf(c1).getById('A')).isNotNull();
 
+      // B still covers the whole week after A is gone → delete allowed.
       final c2 = await createContainer([
         plan('A', days: [0]),
-        plan('B', days: [2]),
+        plan('B', days: [0, 1, 2, 3, 4, 5, 6]),
       ]);
       addTearDown(c2.dispose);
       await c2.read(planDetailControllerProvider('A').future);

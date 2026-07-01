@@ -70,9 +70,20 @@ bool _sameWeekdays(List<int> a, List<int> b) {
   return b.every(sa.contains) && sa.length == b.toSet().length;
 }
 
-/// The ≥1-plan rule: the last plan can never be deleted. Any plan counts
-/// (active or inactive). Pure pre-check — the repo stays unaware (S09 owns it).
-bool canDeletePlan(List<PlanTemplate> plans) => plans.length > 1;
+/// Coverage rule: a plan is deletable when (a) it is not the last plan, and
+/// (b) removing it introduces no NEW uncovered weekday. A paused/redundant plan
+/// covers nothing new, so it is always removable (even when the week already
+/// has gaps); a plan that uniquely covers a day is not. Pure pre-check; the
+/// repo stays unaware.
+bool canDeletePlan(List<PlanTemplate> plans, {required String deletingId}) {
+  if (plans.length <= 1) return false;
+  final wasUncovered = uncoveredWeekdays(plans).toSet();
+  final remaining = [
+    for (final p in plans)
+      if (p.id != deletingId) p,
+  ];
+  return uncoveredWeekdays(remaining).every(wasUncovered.contains);
+}
 
 /// Weekdays 0..6 claimed by NO active plan, ascending and deduped.
 /// [] = full coverage. Inactive plans cover nothing.

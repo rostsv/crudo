@@ -146,15 +146,46 @@ void main() {
   });
 
   group('canDeletePlan', () {
-    test('zero plans → false', () => check(canDeletePlan([])).isFalse());
-    test('one plan → false', () => check(canDeletePlan([_plan()])).isFalse());
-    test('two plans → true', () {
-      check(canDeletePlan([_plan(id: 'a'), _plan(id: 'b')])).isTrue();
+    final fullWeek = [0, 1, 2, 3, 4, 5, 6];
+
+    test('empty/unknown set → false (nothing covers)', () {
+      check(canDeletePlan([], deletingId: 'x')).isFalse();
     });
-    test('inactive plans still count toward the floor', () {
+
+    test('the sole plan covering the week → false', () {
       check(
-        canDeletePlan([_plan(id: 'a'), _plan(id: 'b', active: false)]),
+        canDeletePlan([_plan(id: 'a', days: fullWeek)], deletingId: 'a'),
+      ).isFalse();
+    });
+
+    test('a redundant plan while another active covers the week → true', () {
+      check(
+        canDeletePlan([
+          _plan(id: 'a', days: fullWeek),
+          _plan(id: 'b', days: [0, 1]),
+        ], deletingId: 'b'),
       ).isTrue();
+    });
+
+    test('a plan that uniquely covers a day → false', () {
+      // weekend plan is the only cover for Sat/Sun.
+      check(
+        canDeletePlan([
+          _plan(id: 'a', days: [0, 1, 2, 3, 4]),
+          _plan(id: 'b', days: [5, 6]),
+        ], deletingId: 'b'),
+      ).isFalse();
+    });
+
+    test('paused plans do not count toward coverage', () {
+      final plans = [
+        _plan(id: 'a', days: fullWeek),
+        _plan(id: 'b', days: fullWeek, active: false),
+      ];
+      // Removing the active full-coverage plan leaves only the paused one.
+      check(canDeletePlan(plans, deletingId: 'a')).isFalse();
+      // Removing the paused plan keeps full active coverage.
+      check(canDeletePlan(plans, deletingId: 'b')).isTrue();
     });
   });
 

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../data/services/id_generator.dart';
+import '../../../../domain/plan/plan_template.dart';
 import '../../../../domain/services/plan_scheduling.dart';
 import '../../../core/formatting.dart';
 import '../../../core/themes/colors.dart';
@@ -13,9 +14,11 @@ import '../../../core/widgets/sheet.dart';
 import '../../../core/widgets/sheet_actions.dart';
 import '../../../core/widgets/toast.dart';
 import '../../today/view_models/today_providers.dart';
+import '../view_models/plan_activation.dart';
 import '../view_models/plan_detail_controller.dart';
 import '../view_models/plan_draft.dart';
 import '../view_models/plans_list.dart';
+import 'coverage_resolution_sheet.dart';
 
 /// Read-only plan detail viewer. `PLAN` eyebrow + name, a gradient daily-target
 /// hero (kcal + macros + repeating-weekday footer), and the time-ordered meal
@@ -158,8 +161,6 @@ class PlanViewScreen extends ConsumerWidget {
   }
 
   Future<void> _showActions(BuildContext context, WidgetRef ref) async {
-    final allPlans = ref.read(planTemplatesProvider).value ?? const [];
-    final canDelete = canDeletePlan(allPlans);
     final action = await showCrudoSheet<String>(
       context,
       builder: (sheetCtx) => SheetScaffold(
@@ -181,14 +182,7 @@ class PlanViewScreen extends ConsumerWidget {
             SheetActionRow(
               icon: Icons.delete_outline,
               label: 'Delete plan',
-              enabled: canDelete,
               onTap: () => Navigator.of(sheetCtx).pop('delete'),
-              onDisabledTap: () => showCrudoToast(
-                sheetCtx,
-                "Can't delete your only plan",
-                body: 'Create another plan before deleting this one.',
-                kind: ToastKind.warn,
-              ),
             ),
           ],
         ),
@@ -214,54 +208,83 @@ class PlanViewScreen extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
+    final activation = ref.read(planActivationProvider.notifier);
     final allPlans = ref.read(planTemplatesProvider).value ?? const [];
-    if (!canDeletePlan(allPlans)) {
+    final others = allPlans.where((p) => p.id != planId).toList();
+
+    // The last plan can never be deleted (nothing left to cover the week).
+    if (others.isEmpty) {
       showCrudoToast(
         context,
         "Can't delete your only plan",
-        body: 'Create another plan before deleting this one.',
+        body: 'Create another plan first.',
         kind: ToastKind.warn,
       );
       return;
     }
-    final confirmed = await showCrudoSheet<bool>(
-      context,
-      builder: (sheetCtx) => SheetScaffold(
-        title: 'Delete plan?',
-        body: Text(
-          'This plan and its schedule will be removed.',
-          style: CrudoText.body,
-        ),
-        cta: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SecondaryAction(
-              label: 'Delete',
-              onTap: () => Navigator.of(sheetCtx).pop(true),
-            ),
-            const SizedBox(height: Spacing.sm),
-            SecondaryAction(
-              label: 'Cancel',
-              onTap: () => Navigator.of(sheetCtx).pop(false),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-    final deleted = await ref
-        .read(planDetailControllerProvider(planId).notifier)
-        .delete();
+
+    final orphaned = await activation.daysOrphanedByDeleting(planId);
     if (!context.mounted) return;
-    if (deleted) {
-      Navigator.of(context).pop();
-    } else {
-      showCrudoToast(
+
+    if (orphaned.isEmpty) {
+      // Coverage unaffected — plain confirm, then delete.
+      final confirmed = await showCrudoSheet<bool>(
         context,
-        "Can't delete your only plan",
-        body: 'Create another plan before deleting this one.',
-        kind: ToastKind.warn,
+        builder: (sheetCtx) => SheetScaffold(
+          title: 'Delete plan?',
+          body: Text(
+            'This plan and its schedule will be removed.',
+            style: CrudoText.body,
+          ),
+          cta: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SecondaryAction(
+                label: 'Delete',
+                onTap: () => Navigator.of(sheetCtx).pop(true),
+              ),
+              const SizedBox(height: Spacing.sm),
+              SecondaryAction(
+                label: 'Cancel',
+                onTap: () => Navigator.of(sheetCtx).pop(false),
+              ),
+            ],
+          ),
+        ),
       );
+      if (confirmed != true || !context.mounted) return;
+      await ref.read(planDetailControllerProvider(planId).notifier).delete();
+      if (context.mounted) Navigator.of(context).pop();
+      return;
+    }
+
+    // Deleting orphans days — resolve coverage first.
+    final candidates = await activation.otherActivePlans(planId);
+    if (!context.mounted) return;
+    final choice = await showCoverageResolutionSheet(
+      context,
+      orphanedDays: orphaned,
+      candidates: candidates,
+    );
+    if (choice == null || !context.mounted) return;
+    if (choice.create) {
+      // Free the days (others remain, so ≥1 plan stays), then seed a new plan.
+      await activation.forceDelete(planId);
+      if (!context.mounted) return;
+      final seed = PlanTemplate(
+        id: ref.read(idGeneratorProvider).newId(),
+        name: '',
+        days: orphaned,
+      );
+      Navigator.of(context).pop(); // leave the viewer of the deleted plan
+      context.push('/plans/new', extra: seed);
+    } else {
+      await activation.assignDaysAndDelete(
+        planId,
+        toPlanId: choice.assignToId!,
+        days: orphaned,
+      );
+      if (context.mounted) Navigator.of(context).pop();
     }
   }
 }

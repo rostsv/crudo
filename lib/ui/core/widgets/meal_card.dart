@@ -289,7 +289,7 @@ class _StatusCircle extends StatelessWidget {
       MealStatus.done => (
         colors.primary,
         null,
-        Icon(Icons.check, size: IconSizes.sm, color: colors.surfaceLowest),
+        Icon(Icons.check, size: IconSizes.md, color: colors.surfaceLowest),
       ),
       MealStatus.partial => (
         colors.gold,

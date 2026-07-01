@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../domain/services/meal_lifecycle.dart';
+import '../../../../domain/shared/enums.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/widgets/sheet_actions.dart';
 import '../../../core/themes/dimensions.dart';
@@ -15,7 +16,9 @@ import 'swap_sheet.dart';
 
 /// Bottom-sheet actions for a meal: Snooze, Swap, Skip. Eligibility mirrors
 /// the detail screen exactly; disabled rows render at [Opacities.disabled]
-/// and still respond with the same ineligibility toast.
+/// and respond with the same ineligibility toast — except when the meal is
+/// locked (skipped, or skipped-then-logged), where an explanatory message
+/// below covers it and taps are silent (no extra toast).
 class MealActionsSheet extends ConsumerWidget {
   const MealActionsSheet({required this.date, required this.mealId, super.key});
 
@@ -32,11 +35,19 @@ class MealActionsSheet extends ConsumerWidget {
 
     final now = ref.watch(clockProvider)();
     final today = ref.watch(todayProvider);
-    final canEdit = canEditMealContent(
-      day.meals.firstWhere((m) => m.id == mealId),
-      day.date,
-      now,
-    );
+    final meal = day.meals.firstWhere((m) => m.id == mealId);
+    // Matches what the detail screen's header actually displays — a
+    // never-snoozed meal whose time has passed shows SKIPPED too, not just
+    // an explicit skippedAt. The sheet must lock out everything whenever
+    // that's what's on screen, or actions silently no-op while looking live.
+    final isSkipped = mealStatus(day, mealId, now) == MealStatus.skipped;
+    // A meal that was skipped and then checked/logged anyway: `logMeal`
+    // never clears skippedAt, so it can be skippedAt != null AND done/
+    // partial at once — `mealStatus` reports done/partial then (checked
+    // wins), so this needs its own message instead of going silently blank.
+    final isLoggedLocked = !isSkipped && meal.meal.anyChecked;
+    final locked = isSkipped || isLoggedLocked;
+    final canEdit = !locked && canEditMealContent(meal, day.date, now);
 
     return SheetScaffold(
       title: 'Meal actions',
@@ -48,18 +59,32 @@ class MealActionsSheet extends ConsumerWidget {
             key: const ValueKey('action-snooze'),
             icon: Icons.snooze_outlined,
             label: 'Snooze',
-            enabled: canSnoozeMeal(day, mealId, now, today),
+            enabled: !locked && canSnoozeMeal(day, mealId, now, today),
             colors: colors,
             onTap: () => showCrudoSheet<void>(
               context,
               builder: (_) => SnoozeSheet(date: date, mealId: mealId),
             ),
-            onDisabledTap: () {
-              final reason = snoozeIneligibilityReason(day, mealId, now, today);
-              if (reason != null) {
-                showCrudoToast(context, reason, kind: ToastKind.warn);
-              }
-            },
+            // A locked meal (skipped, or skipped-then-logged) is already
+            // explained by the message below — no extra toast on top of it.
+            onDisabledTap: locked
+                ? null
+                : () {
+                    final reason = snoozeIneligibilityReason(
+                      day,
+                      mealId,
+                      now,
+                      today,
+                    );
+                    if (reason != null) {
+                      showCrudoToast(
+                        context,
+                        "Can't snooze",
+                        body: reason,
+                        kind: ToastKind.warn,
+                      );
+                    }
+                  },
           ),
           _ActionRow(
             key: const ValueKey('action-swap'),
@@ -71,19 +96,52 @@ class MealActionsSheet extends ConsumerWidget {
               context,
               builder: (_) => SwapSheet(date: date, mealId: mealId),
             ),
-            onDisabledTap: () =>
-                showCrudoToast(context, _guardMessage, kind: ToastKind.warn),
+            onDisabledTap: locked
+                ? null
+                : () => showCrudoToast(
+                    context,
+                    _guardMessage,
+                    body: 'This meal is already logged, skipped, or locked.',
+                    kind: ToastKind.warn,
+                  ),
           ),
           _ActionRow(
             key: const ValueKey('action-skip'),
             icon: Icons.skip_next,
             label: 'Skip',
-            enabled: canSkipMeal(day, mealId, today),
+            enabled: !locked && canSkipMeal(day, mealId, today),
             colors: colors,
             onTap: () => _skip(context, ref),
-            onDisabledTap: () =>
-                showCrudoToast(context, _guardMessage, kind: ToastKind.warn),
+            onDisabledTap: locked
+                ? null
+                : () => showCrudoToast(
+                    context,
+                    _guardMessage,
+                    body: 'This meal is already logged, skipped, or locked.',
+                    kind: ToastKind.warn,
+                  ),
           ),
+          if (locked) ...[
+            const SizedBox(height: Spacing.sm),
+            Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: IconSizes.sm,
+                  color: colors.onSurfaceMut,
+                ),
+                const SizedBox(width: Spacing.xs),
+                Expanded(
+                  child: Text(
+                    isSkipped
+                        ? "This meal was skipped and can't be changed."
+                        : "This meal is already logged and can't be changed.",
+                    style: CrudoText.body.copyWith(color: colors.onSurfaceMut),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

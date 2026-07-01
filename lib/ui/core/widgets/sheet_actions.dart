@@ -12,6 +12,7 @@ Future<void> runDayOp(
   BuildContext context,
   Future<void> Function() op, {
   required String guardMessage,
+  String? guardBody,
   bool pop = false,
 }) async {
   try {
@@ -19,7 +20,12 @@ Future<void> runDayOp(
     if (pop && context.mounted) Navigator.of(context).pop();
   } on StateError {
     if (context.mounted) {
-      showCrudoToast(context, guardMessage, kind: ToastKind.warn);
+      showCrudoToast(
+        context,
+        guardMessage,
+        body: guardBody,
+        kind: ToastKind.warn,
+      );
     }
   }
 }

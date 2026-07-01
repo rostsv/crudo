@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../domain/meal/meal_item.dart';
 import '../../../../domain/meal/meal_snapshot.dart';
 import '../../../../domain/services/meal_lifecycle.dart';
 import '../../../../domain/services/nutrition.dart';
@@ -16,6 +17,7 @@ import '../../../core/themes/typography.dart';
 import '../../../core/widgets/confirm_sheet.dart';
 import '../../../core/widgets/primary_cta.dart';
 import '../../../core/widgets/sheet.dart';
+import '../../../core/widgets/macro_chip.dart';
 import '../../../core/widgets/sheet_actions.dart';
 import '../../../core/widgets/toast.dart';
 import '../../today/view_models/day_controller.dart';
@@ -198,6 +200,8 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
                           showCrudoToast(
                             context,
                             _guardMessage,
+                            body:
+                                'This meal is already logged, skipped, or locked.',
                             kind: ToastKind.warn,
                           );
                           return;
@@ -225,7 +229,10 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
                   Spacing.xl,
                 ),
                 children: [
-                  _MacroSummary(macros: mealSnapshotMacros(meal.meal)),
+                  _MacroSummary(
+                    macros: mealSnapshotMacros(meal.meal),
+                    tags: meal.meal.tags,
+                  ),
                   const SizedBox(height: Spacing.lg),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -244,23 +251,36 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
                     ],
                   ),
                   const SizedBox(height: Spacing.sm),
-                  for (final (i, item) in items.indexed) ...[
-                    _ItemRow(
-                      key: ValueKey('item-check-$i'),
-                      name: item.food.name,
-                      grams: item.food.grams.value,
-                      kcal: item.food.kcal,
-                      checked: draft.contains(i),
-                      colors: colors,
-                      onTap: !isToday ? null : () => _toggleDraft(i),
-                    ),
-                    if (i != items.length - 1)
-                      const SizedBox(height: Spacing.sm),
-                  ],
-                  const SizedBox(height: Spacing.sm),
                   _EatenProgress(
-                    fraction: items.isEmpty ? 0 : draft.length / items.length,
+                    fraction: _eatenKcalFraction(items, draft),
                     colors: colors,
+                  ),
+                  const SizedBox(height: Spacing.sm),
+                  ClipRRect(
+                    borderRadius: Radii.all(Radii.lg),
+                    child: Column(
+                      children: [
+                        for (final (i, item) in items.indexed)
+                          ColoredBox(
+                            key: ValueKey('item-row-$i'),
+                            color: i.isEven
+                                ? colors.surface
+                                : colors.surfaceLow,
+                            child: _ItemRow(
+                              key: ValueKey('item-check-$i'),
+                              name: item.food.name,
+                              grams: item.food.grams.value,
+                              kcal: item.food.kcal,
+                              protein: item.food.protein,
+                              carbs: item.food.carbs,
+                              fats: item.food.fats,
+                              checked: draft.contains(i),
+                              colors: colors,
+                              onTap: !isToday ? null : () => _toggleDraft(i),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -332,11 +352,13 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
   }
 }
 
-/// Total-intake card (meal.jsx 33–51): big kcal + three macro mini-tiles.
+/// Total-intake card: kcal hero (left) + macro tiles stacked in a column
+/// (right) + tag pills.
 class _MacroSummary extends StatelessWidget {
-  const _MacroSummary({required this.macros});
+  const _MacroSummary({required this.macros, required this.tags});
 
   final Macros macros;
+  final List<MealTag> tags;
 
   @override
   Widget build(BuildContext context) {
@@ -358,59 +380,93 @@ class _MacroSummary extends StatelessWidget {
           const Text('TOTAL INTAKE', style: CrudoText.label),
           const SizedBox(height: Spacing.sm),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${macros.kcal.round()}',
-                key: const ValueKey('detail-kcal'),
-                style: CrudoText.display,
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '${macros.kcal.round()}',
+                      key: const ValueKey('detail-kcal'),
+                      style: CrudoText.display,
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    Text(
+                      'kcal',
+                      style: CrudoText.body.copyWith(
+                        color: colors.onSurfaceMut,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: Spacing.sm),
-              Text(
-                'kcal',
-                style: CrudoText.body.copyWith(color: colors.onSurfaceMut),
+              const SizedBox(width: Spacing.md),
+              IntrinsicWidth(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final (label, value, accent) in tiles) ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: Spacing.sm,
+                          vertical: Spacing.xs,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.surface,
+                          borderRadius: Radii.all(Radii.md),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              label,
+                              style: CrudoText.label.copyWith(
+                                color: colors.onSurfaceMut,
+                              ),
+                            ),
+                            const SizedBox(width: Spacing.sm),
+                            Text(
+                              '${value.round()}g',
+                              style: CrudoText.title.copyWith(color: accent),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (label != 'FATS') const SizedBox(height: Spacing.xs),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: Spacing.md),
-          Row(
-            children: [
-              for (final (label, value, accent) in tiles) ...[
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.all(Spacing.sm),
-                    decoration: BoxDecoration(
-                      color: colors.surface,
-                      borderRadius: Radii.all(Radii.md),
+          if (tags.isNotEmpty) ...[
+            const SizedBox(height: Spacing.md),
+            Wrap(
+              spacing: Spacing.xs,
+              runSpacing: Spacing.xs,
+              children: [
+                for (final tag in tags)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: Spacing.sm,
+                      vertical: Spacing.xs,
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(label, style: CrudoText.label),
-                        const SizedBox(height: Spacing.xs),
-                        Text.rich(
-                          TextSpan(
-                            text: '${value.round()}',
-                            style: CrudoText.title.copyWith(color: accent),
-                            children: [
-                              TextSpan(
-                                text: 'g',
-                                style: CrudoText.label.copyWith(
-                                  color: colors.onSurfaceMut,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    decoration: BoxDecoration(
+                      color: colors.primary,
+                      borderRadius: Radii.all(Radii.full),
+                    ),
+                    child: Text(
+                      tag.name.toUpperCase(),
+                      style: CrudoText.label.copyWith(
+                        color: colors.surfaceLowest,
+                      ),
                     ),
                   ),
-                ),
-                if (label != 'FATS') const SizedBox(width: Spacing.sm),
               ],
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -433,6 +489,7 @@ class _EatenProgress extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         return ClipRRect(
+          key: const ValueKey('eaten-progress-track'),
           borderRadius: Radii.all(Radii.full),
           child: SizedBox(
             height: _height,
@@ -440,8 +497,9 @@ class _EatenProgress extends StatelessWidget {
               children: [
                 Positioned.fill(child: ColoredBox(color: colors.surfaceLow)),
                 AnimatedContainer(
-                  duration: dim.Durations.fast,
-                  curve: Curves.easeOut,
+                  key: const ValueKey('eaten-progress-fill'),
+                  duration: dim.Durations.slow,
+                  curve: Curves.easeInOut,
                   width: (fraction * constraints.maxWidth).clamp(
                     0,
                     constraints.maxWidth,
@@ -466,6 +524,9 @@ class _ItemRow extends StatelessWidget {
     required this.name,
     required this.grams,
     required this.kcal,
+    required this.protein,
+    required this.carbs,
+    required this.fats,
     required this.checked,
     required this.colors,
     this.onTap,
@@ -475,6 +536,9 @@ class _ItemRow extends StatelessWidget {
   final String name;
   final double grams;
   final double kcal;
+  final double protein;
+  final double carbs;
+  final double fats;
   final bool checked;
   final CrudoColors colors;
   final VoidCallback? onTap;
@@ -490,27 +554,58 @@ class _ItemRow extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+          padding: const EdgeInsets.symmetric(
+            vertical: Spacing.sm,
+            horizontal: Spacing.sm,
+          ),
           child: Row(
+            // Centers the check circle against the full two-line block
+            // (name+trailing, then macro dots), not just the first line.
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               _CheckCircle(checked: checked, size: _checkSize),
               const SizedBox(width: Spacing.md),
               Expanded(
-                child: AnimatedDefaultTextStyle(
-                  duration: dim.Durations.fast,
-                  curve: Curves.easeOut,
-                  style: checked
-                      ? CrudoText.body.copyWith(
-                          color: colors.onSurfaceMut,
-                          decoration: TextDecoration.lineThrough,
-                        )
-                      : CrudoText.body.copyWith(color: colors.onSurface),
-                  child: Text(name),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: AnimatedDefaultTextStyle(
+                            duration: dim.Durations.fast,
+                            curve: Curves.easeOut,
+                            style: checked
+                                ? CrudoText.body.copyWith(
+                                    color: colors.onSurfaceMut,
+                                    decoration: TextDecoration.lineThrough,
+                                  )
+                                : CrudoText.body.copyWith(
+                                    color: colors.onSurface,
+                                  ),
+                            child: Text(name),
+                          ),
+                        ),
+                        Text(
+                          '${grams.round()}g · ${kcal.round()} kcal',
+                          style: CrudoText.body.copyWith(
+                            color: colors.onSurfaceMut,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    Row(
+                      children: [
+                        MacroChip(grams: protein, color: colors.proteinColor),
+                        const SizedBox(width: Spacing.sm),
+                        MacroChip(grams: carbs, color: colors.carbsColor),
+                        const SizedBox(width: Spacing.sm),
+                        MacroChip(grams: fats, color: colors.fatsColor),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              Text(
-                '${grams.round()}g · ${kcal.round()} kcal',
-                style: CrudoText.body.copyWith(color: colors.onSurfaceMut),
               ),
             ],
           ),
@@ -530,9 +625,13 @@ class _CheckCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
     return CustomPaint(
-      // Ghost-border ring on both states so the circle contrasts against the
-      // background even when filled (design_system §2 ghost-border fallback).
-      painter: _CheckRingPainter(colors.outline),
+      // Foreground, not background: a `painter` layer paints behind the
+      // child and is fully hidden by the opaque same-size filled circle.
+      // Mid-gray ring on both states so the circle contrasts against the
+      // background even when filled, without going full-dark.
+      foregroundPainter: _CheckRingPainter(
+        colors.onSurfaceMut.withValues(alpha: 0.55),
+      ),
       child: AnimatedContainer(
         duration: dim.Durations.fast,
         curve: Curves.easeOut,
@@ -573,7 +672,7 @@ class _CheckRingPainter extends CustomPainter {
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5,
+        ..strokeWidth = 2,
     );
   }
 
@@ -627,6 +726,18 @@ class _CheckAllToggle extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Eaten fraction by kcal share (not item count) — mirrors the kcal hero /
+/// TOTAL INTAKE card so "half eaten" means half the calories, not half the
+/// ingredients.
+double _eatenKcalFraction(List<MealItem> items, Set<int> draft) {
+  final totalKcal = items.fold<double>(0, (sum, item) => sum + item.food.kcal);
+  if (totalKcal <= 0) return 0;
+  final checkedKcal = items.indexed
+      .where((entry) => draft.contains(entry.$1))
+      .fold<double>(0, (sum, entry) => sum + entry.$2.food.kcal);
+  return checkedKcal / totalKcal;
 }
 
 extension on Set<int> {

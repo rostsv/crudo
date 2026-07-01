@@ -6,6 +6,7 @@ import 'package:crudo/domain/shared/macros.dart';
 import '../themes/colors.dart';
 import '../themes/dimensions.dart';
 import '../themes/typography.dart';
+import 'macro_chip.dart';
 
 /// A meal card: vertical status bar, meta row (time · meal type), name,
 /// fit-aware ingredient preview, macros row (kcal + colored P/C/F dots),
@@ -50,7 +51,6 @@ class MealCard extends StatelessWidget {
   /// tap means for the current status.
   final VoidCallback? onStatusTap;
 
-  static const _barHeight = 44.0; // component size, 4px grid
   static const _statusTapTarget = 44.0; // min touch target, 4px grid (§5)
 
   /// Largest [k] such that [names][0..k) joined by ` · ` (plus
@@ -99,24 +99,19 @@ class MealCard extends StatelessWidget {
           color: colors.surfaceLowest,
           borderRadius: Radii.all(Radii.lg),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
+            // Content, inset to leave room for the full-height accent bar
+            // (left) and the vertically-centered status circle (right),
+            // both drawn as full-height overlays below.
             Padding(
-              padding: const EdgeInsets.only(top: Spacing.xs),
-              child: Container(
-                width: Spacing.xs,
-                height: _barHeight,
-                decoration: BoxDecoration(
-                  color: _barColor(colors),
-                  borderRadius: Radii.all(Radii.full),
-                ),
+              padding: const EdgeInsets.only(
+                left: Spacing.xs + Spacing.md,
+                right: _statusTapTarget + Spacing.md,
               ),
-            ),
-            const SizedBox(width: Spacing.md),
-            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text.rich(
                     TextSpan(
@@ -189,40 +184,52 @@ class MealCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      _MacroChip(
-                        grams: macros.protein.round(),
+                      MacroChip(
+                        grams: macros.protein,
                         color: colors.proteinColor,
                       ),
-                      _MacroChip(
-                        grams: macros.carbs.round(),
-                        color: colors.carbsColor,
-                      ),
-                      _MacroChip(
-                        grams: macros.fats.round(),
-                        color: colors.fatsColor,
-                      ),
+                      MacroChip(grams: macros.carbs, color: colors.carbsColor),
+                      MacroChip(grams: macros.fats, color: colors.fatsColor),
                     ],
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: Spacing.md),
-            Center(
-              child: Semantics(
-                button: onStatusTap != null,
-                label: status == MealStatus.done
-                    ? 'Undo $title'
-                    : 'Mark $title eaten',
-                child: GestureDetector(
-                  onTap: onStatusTap,
-                  behavior: HitTestBehavior.opaque,
-                  child: SizedBox(
-                    width: _statusTapTarget,
-                    height: _statusTapTarget,
-                    child: Center(
-                      child: _StatusCircle(
-                        status: status,
-                        key: ValueKey('meal-status-${status.name}'),
+            // Full-height accent bar.
+            Positioned(
+              left: 0,
+              top: 0,
+              bottom: 0,
+              child: Container(
+                width: Spacing.xs,
+                decoration: BoxDecoration(
+                  color: _barColor(colors),
+                  borderRadius: Radii.all(Radii.full),
+                ),
+              ),
+            ),
+            // Vertically-centered status circle.
+            Positioned(
+              right: 0,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: Semantics(
+                  button: onStatusTap != null,
+                  label: status == MealStatus.done
+                      ? 'Undo $title'
+                      : 'Mark $title eaten',
+                  child: GestureDetector(
+                    onTap: onStatusTap,
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: _statusTapTarget,
+                      height: _statusTapTarget,
+                      child: Center(
+                        child: _StatusCircle(
+                          status: status,
+                          key: ValueKey('meal-status-${status.name}'),
+                        ),
                       ),
                     ),
                   ),
@@ -244,36 +251,7 @@ class MealCard extends StatelessWidget {
   };
 }
 
-/// Small colored dot + grams label for a single macro.
-class _MacroChip extends StatelessWidget {
-  const _MacroChip({required this.grams, required this.color});
-
-  final int grams;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).extension<CrudoColors>()!;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: Spacing.xs,
-          height: Spacing.xs,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
-        const SizedBox(width: Spacing.xs),
-        Text(
-          '${grams}g',
-          style: CrudoText.labelMd.copyWith(color: colors.onSurfaceMut),
-        ),
-      ],
-    );
-  }
-}
-
 /// 36px trailing status circle: done=filled teal check, partial=gold
-/// split-circle (never "½"), upcoming=outlined clock, skipped=soft-red X.
 class _StatusCircle extends StatelessWidget {
   const _StatusCircle({required this.status, super.key});
 
@@ -312,7 +290,11 @@ class _StatusCircle extends StatelessWidget {
       MealStatus.skipped => (
         colors.errorSoft,
         null,
-        Icon(Icons.close, size: IconSizes.md, color: colors.error),
+        Icon(
+          Icons.hourglass_disabled_outlined,
+          size: IconSizes.md,
+          color: colors.error,
+        ),
       ),
     };
     return CustomPaint(

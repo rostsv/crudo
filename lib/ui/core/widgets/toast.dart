@@ -6,12 +6,13 @@ import '../themes/colors.dart';
 import '../themes/dimensions.dart' as dim;
 import '../themes/typography.dart';
 
-/// Toast severity — picks the accent color and leading icon.
+/// Toast severity — picks the accent color, tint, and leading icon.
 enum ToastKind { success, warn, error }
 
-/// Floating banner toast (dark surface, accent edge, auto-dismiss): a bold
-/// [title], optional [body] detail, and a dismiss X. For inline validation
-/// feedback prefer in-form errors; toasts are for global events.
+/// Top-anchored banner toast with a tinted background, filled icon badge,
+/// bold title, optional body, and a dismiss X.
+/// For inline validation feedback prefer in-form errors; toasts are for global
+/// events.
 void showCrudoToast(
   BuildContext context,
   String title, {
@@ -21,10 +22,10 @@ void showCrudoToast(
 }) {
   final overlay = Overlay.of(context);
   final colors = Theme.of(context).extension<CrudoColors>()!;
-  final (accent, icon) = switch (kind) {
-    ToastKind.success => (colors.primarySoft, Icons.check),
-    ToastKind.warn => (colors.gold, Icons.warning_amber),
-    ToastKind.error => (colors.error, Icons.warning_amber),
+  final (accent, tint, badgeIcon) = switch (kind) {
+    ToastKind.success => (colors.success, colors.primaryContainer, Icons.check),
+    ToastKind.warn => (colors.gold, colors.goldSoft, Icons.priority_high),
+    ToastKind.error => (colors.error, colors.errorSoft, Icons.close),
   };
 
   late final OverlayEntry entry;
@@ -36,32 +37,33 @@ void showCrudoToast(
 
   entry = OverlayEntry(
     builder: (context) => Positioned(
-      bottom: MediaQuery.of(context).padding.bottom + 2 * dim.Spacing.xxl,
+      top: MediaQuery.of(context).padding.top + dim.Spacing.sm,
       left: dim.Spacing.md,
       right: dim.Spacing.md,
       child: Material(
         color: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(dim.Spacing.md),
           decoration: BoxDecoration(
-            color: colors.onSurface,
-            borderRadius: dim.Radii.all(dim.Radii.md),
+            color: tint,
+            borderRadius: dim.Radii.all(dim.Radii.lg),
             boxShadow: dim.Shadows.cloudDeep,
           ),
+          padding: const EdgeInsets.all(dim.Spacing.md),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Accent edge as a filled bar (no-line rule: never a Border).
               Container(
-                width: dim.Spacing.xs,
-                height: dim.IconSizes.md,
                 decoration: BoxDecoration(
+                  shape: BoxShape.circle,
                   color: accent,
-                  borderRadius: dim.Radii.all(dim.Radii.full),
+                ),
+                padding: const EdgeInsets.all(dim.Spacing.xs),
+                child: Icon(
+                  badgeIcon,
+                  size: dim.IconSizes.md,
+                  color: colors.surfaceLowest,
                 ),
               ),
-              const SizedBox(width: dim.Spacing.sm),
-              Icon(icon, size: dim.IconSizes.md, color: colors.surfaceLowest),
               const SizedBox(width: dim.Spacing.sm),
               Expanded(
                 child: Column(
@@ -70,7 +72,7 @@ void showCrudoToast(
                     Text(
                       title,
                       style: CrudoText.body.copyWith(
-                        color: colors.surfaceLowest,
+                        color: colors.onSurface,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -79,7 +81,7 @@ void showCrudoToast(
                       Text(
                         body,
                         style: CrudoText.body.copyWith(
-                          color: colors.surfaceLowest.withValues(alpha: 0.75),
+                          color: colors.onSurfaceMut,
                         ),
                       ),
                     ],
@@ -93,7 +95,7 @@ void showCrudoToast(
                 child: Icon(
                   Icons.close,
                   size: dim.IconSizes.sm,
-                  color: colors.surfaceLowest.withValues(alpha: 0.7),
+                  color: colors.onSurfaceMut,
                 ),
               ),
             ],

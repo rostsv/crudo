@@ -212,6 +212,8 @@ class _TodayScreenState extends ConsumerState<TodayScreen>
                                       : ctrl.markAllEaten(meal.id),
                                   guardMessage:
                                       "That can't be changed anymore.",
+                                  guardBody:
+                                      'This meal is already logged, skipped, or locked.',
                                 );
                               },
                       );

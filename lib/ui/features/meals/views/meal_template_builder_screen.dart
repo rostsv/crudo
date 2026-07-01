@@ -164,7 +164,9 @@ class _BuilderFormState extends ConsumerState<_BuilderForm> {
       final names = out.affected.map((p) => p.name).join(', ');
       showCrudoToast(
         context,
-        "This is the only meal in $names — add another meal or delete that plan first.",
+        "Can't delete meal",
+        body:
+            'This is the only meal in $names. Add another meal or delete that plan first.',
         kind: ToastKind.warn,
       );
       return;

@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+
+import 'package:crudo/domain/shared/enums.dart';
 import 'package:crudo/domain/shared/meal_time.dart';
 
 // Display + route-param formatting shared across features (today, meals).
@@ -29,3 +32,15 @@ String gramsText(double v) => v == v.roundToDouble() ? '${v.round()}' : '$v';
 /// Normalises a user-typed number string (comma or dot decimal) and parses
 /// it. Returns null when the string is not a valid number.
 double? parseGrams(String s) => double.tryParse(s.replaceAll(',', '.'));
+
+/// Single-accent category glyph shown next to an ingredient name.
+IconData foodCategoryIcon(FoodCategory category) => switch (category) {
+  FoodCategory.meat => Icons.kebab_dining,
+  FoodCategory.fish => Icons.set_meal,
+  FoodCategory.eggs => Icons.egg,
+  FoodCategory.grain => Icons.grain,
+  FoodCategory.veg => Icons.eco,
+  FoodCategory.fruit => Icons.apple,
+  FoodCategory.oil => Icons.water_drop,
+  FoodCategory.custom => Icons.category,
+};

@@ -84,11 +84,18 @@ class _EditorFormState extends ConsumerState<_EditorForm> {
       showCrudoToast(
         context,
         "That can't be changed anymore.",
+        body: 'This meal is already logged, skipped, or locked.',
         kind: ToastKind.warn,
       );
       return;
     }
-    if (detaches) showCrudoToast(context, detachToastMessage);
+    if (detaches) {
+      showCrudoToast(
+        context,
+        'Future day saved separately',
+        body: detachToastMessage,
+      );
+    }
     context.pop();
   }
 

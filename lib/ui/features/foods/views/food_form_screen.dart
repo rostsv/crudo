@@ -99,6 +99,7 @@ class _FoodFormState extends ConsumerState<_FoodForm> {
       showCrudoToast(
         context,
         "Couldn't save — try again",
+        body: 'Check your connection and try once more.',
         kind: ToastKind.error,
       );
       return;
@@ -139,7 +140,11 @@ class _FoodFormState extends ConsumerState<_FoodForm> {
     if (!confirmed || !mounted) return;
     await _ctrl.delete();
     if (!mounted) return;
-    showCrudoToast(context, 'Food deleted');
+    showCrudoToast(
+      context,
+      'Food deleted',
+      body: 'Logged days keep their copies.',
+    );
     context.pop();
   }
 

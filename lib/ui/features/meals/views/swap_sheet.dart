@@ -195,13 +195,20 @@ class _SwapSheetState extends ConsumerState<SwapSheet> {
           .read(dayControllerProvider(widget.date).notifier)
           .replaceMeal(widget.mealId, mealSnapshotFromTemplate(t, foods));
       if (!mounted) return;
-      if (detaches) showCrudoToast(context, detachToastMessage);
+      if (detaches) {
+        showCrudoToast(
+          context,
+          'Future day saved separately',
+          body: detachToastMessage,
+        );
+      }
       Navigator.of(context).pop();
     } on StateError {
       if (!mounted) return;
       showCrudoToast(
         context,
         "That can't be changed anymore.",
+        body: 'This meal is already logged, skipped, or locked.',
         kind: ToastKind.warn,
       );
     }

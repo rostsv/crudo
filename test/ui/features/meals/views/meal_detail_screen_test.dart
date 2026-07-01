@@ -4,6 +4,7 @@ import 'package:crudo/config/di.dart';
 import 'package:crudo/data/services/id_generator.dart';
 import 'package:crudo/data/services/seed_service.dart';
 import 'package:crudo/domain/food/food.dart';
+import 'package:crudo/ui/core/themes/colors.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
 import 'package:crudo/ui/core/formatting.dart';
 import 'package:crudo/ui/features/today/view_models/day_controller.dart';
@@ -43,6 +44,10 @@ void main() {
     );
     addTearDown(container.dispose);
     container.listen(dayControllerProvider(date), (prev, next) {});
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -74,6 +79,10 @@ void main() {
     );
     addTearDown(container.dispose);
     container.listen(dayControllerProvider(date), (prev, next) {});
+    tester.view.physicalSize = const Size(800, 1600);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
     final router = GoRouter(
       initialLocation: '/',
@@ -146,6 +155,35 @@ void main() {
       },
     );
 
+    testWidgets(
+      'today: TOTAL INTAKE shows kcal hero, macro tiles, and a green tag pill',
+      (tester) async {
+        await open(tester, date: today);
+        final colors = CrudoColors.light;
+
+        expect(find.text('PROTEIN'), findsOneWidget);
+        expect(find.text('CARBS'), findsOneWidget);
+        expect(find.text('FATS'), findsOneWidget);
+        expect(find.text('32g'), findsOneWidget);
+        expect(find.text('77g'), findsOneWidget);
+        expect(find.text('17g'), findsOneWidget);
+
+        // Protein Oats Bowl has a single tag: breakfast → green pill, caps.
+        expect(find.text('BREAKFAST'), findsOneWidget);
+        final pill = tester.widget<Container>(
+          find
+              .ancestor(
+                of: find.text('BREAKFAST'),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        check((pill.decoration as BoxDecoration).color).equals(colors.primary);
+        final pillText = tester.widget<Text>(find.text('BREAKFAST'));
+        check(pillText.style?.color).equals(colors.surfaceLowest);
+      },
+    );
+
     testWidgets('today: item tap toggles draft without persisting', (
       tester,
     ) async {
@@ -182,6 +220,94 @@ void main() {
         ),
         findsNothing,
       );
+    });
+
+    testWidgets(
+      'today: item row shows no category icon, still has three macro dots, still toggles',
+      (tester) async {
+        await open(tester, date: today);
+        final row = find.byKey(const ValueKey('item-check-0'));
+
+        // No per-category icon on ingredient rows anymore.
+        expect(
+          find.descendant(of: row, matching: find.byIcon(Icons.grain)),
+          findsNothing,
+        );
+
+        final dots = tester
+            .widgetList<Container>(
+              find.descendant(of: row, matching: find.byType(Container)),
+            )
+            .where(
+              (c) =>
+                  c.decoration is BoxDecoration &&
+                  (c.decoration as BoxDecoration).shape == BoxShape.circle,
+            );
+        expect(dots.length, greaterThanOrEqualTo(3));
+
+        await tester.tap(row);
+        await tester.pumpAndSettle();
+        expect(
+          find.descendant(
+            of: row,
+            matching: find.byKey(const ValueKey('check-icon')),
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets(
+      'today: ingredient rows alternate surface/surfaceLow (zebra split, no lines)',
+      (tester) async {
+        await open(tester, date: today);
+        final colors = CrudoColors.light;
+
+        Color? colorOf(int i) => tester
+            .widget<ColoredBox>(find.byKey(ValueKey('item-row-$i')))
+            .color;
+
+        check(colorOf(0)).equals(colors.surface);
+        check(colorOf(1)).equals(colors.surfaceLow);
+        check(colorOf(2)).equals(colors.surface);
+        check(colorOf(3)).equals(colors.surfaceLow);
+      },
+    );
+
+    testWidgets(
+      'today: check-circle ring paints on top of the fill so it stays visible',
+      (tester) async {
+        await open(tester, date: today);
+        final row = find.byKey(const ValueKey('item-check-0'));
+        final customPaint = tester.widget<CustomPaint>(
+          find.descendant(of: row, matching: find.byType(CustomPaint)).first,
+        );
+        // A `painter` (background) layer is fully hidden behind the opaque
+        // same-size filled circle; the ring must be a `foregroundPainter`.
+        expect(customPaint.foregroundPainter, isNotNull);
+        expect(customPaint.painter, isNull);
+      },
+    );
+
+    testWidgets('today: eaten bar fills by kcal share, not item count', (
+      tester,
+    ) async {
+      await open(tester, date: today);
+
+      // Checking item 0 (oats, ~308 kcal of ~582.5 total) should fill the
+      // bar to ~53%, not 1/4 = 25% (item-count share).
+      await tester.tap(find.byKey(const ValueKey('item-check-0')));
+      await tester.pumpAndSettle();
+
+      final trackWidth = tester
+          .getSize(find.byKey(const ValueKey('eaten-progress-track')))
+          .width;
+      final fillWidth = tester
+          .getSize(find.byKey(const ValueKey('eaten-progress-fill')))
+          .width;
+      final ratio = fillWidth / trackWidth;
+      check(ratio).isGreaterThan(0.45);
+      check(ratio).isLessThan(0.60);
     });
 
     testWidgets(
@@ -321,6 +447,9 @@ void main() {
     testWidgets('today: Skip from actions sheet skips and pops', (
       tester,
     ) async {
+      // Before breakfast's 08:00 slot — status is upcoming, so Skip is a
+      // real (not already-auto-skipped) action here.
+      now = DateTime(2026, 6, 4, 7, 30);
       await openWithRouter(tester, date: today);
       await tester.tap(find.byKey(const ValueKey('meal-actions')));
       await tester.pumpAndSettle();
@@ -330,6 +459,111 @@ void main() {
       final day = await container.read(dayControllerProvider(today).future);
       check(day.meals.first.skippedAt).isNotNull();
     });
+
+    testWidgets(
+      'today: kebab actions all disabled with an explanatory message once the meal is skipped',
+      (tester) async {
+        await openWithRouter(tester, date: today);
+        await container
+            .read(dayControllerProvider(today).notifier)
+            .skipMeal('sm-0');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byKey(const ValueKey('meal-actions')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("This meal was skipped and can't be changed."),
+          findsOneWidget,
+        );
+
+        for (final key in ['action-snooze', 'action-swap', 'action-skip']) {
+          final opacity = tester.widget<Opacity>(
+            find
+                .descendant(
+                  of: find.byKey(ValueKey(key)),
+                  matching: find.byType(Opacity),
+                )
+                .first,
+          );
+          check(opacity.opacity).isLessThan(1);
+
+          // Tapping a disabled row on a skipped meal must be silent — the
+          // explanatory message above already covers it; no toast noise.
+          await tester.tap(find.byKey(ValueKey(key)), warnIfMissed: false);
+          await tester.pumpAndSettle();
+        }
+        expect(find.text("Can't snooze"), findsNothing);
+        expect(find.text("That can't be changed anymore."), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'today: kebab is also locked for a meal auto-shown as skipped (time passed, never explicitly skipped)',
+      (tester) async {
+        // Default `now` (09:30) is already past breakfast's 08:00 slot and
+        // sm-0 was never snoozed or explicitly skipped — the header shows
+        // SKIPPED purely from elapsed time. The kebab must match that.
+        await openWithRouter(tester, date: today);
+        final day = await container.read(dayControllerProvider(today).future);
+        check(day.meals.first.skippedAt).isNull();
+
+        await tester.tap(find.byKey(const ValueKey('meal-actions')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("This meal was skipped and can't be changed."),
+          findsOneWidget,
+        );
+        for (final key in ['action-snooze', 'action-swap', 'action-skip']) {
+          await tester.tap(find.byKey(ValueKey(key)), warnIfMissed: false);
+          await tester.pumpAndSettle();
+        }
+        expect(find.text("Can't snooze"), findsNothing);
+        expect(find.text("That can't be changed anymore."), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'today: kebab shows a "already logged" message for a skipped-then-logged meal (partial)',
+      (tester) async {
+        // Explicitly skip, then check + log one item. `logMeal` never clears
+        // skippedAt, so the meal ends up skippedAt != null AND partial —
+        // status is no longer "skipped" (checked wins), so the sheet must
+        // fall back to a distinct "already logged" message, not go blank.
+        await openWithRouter(tester, date: today);
+        final notifier = container.read(dayControllerProvider(today).notifier);
+        await notifier.skipMeal('sm-0');
+        await tester.pumpAndSettle();
+        await notifier.logMeal('sm-0', {0});
+        await tester.pumpAndSettle();
+
+        final day = await container.read(dayControllerProvider(today).future);
+        check(day.meals.first.skippedAt).isNotNull();
+        check(day.meals.first.meal.anyChecked).isTrue();
+        check(day.meals.first.meal.allChecked).isFalse();
+
+        await tester.tap(find.byKey(const ValueKey('meal-actions')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text("This meal is already logged and can't be changed."),
+          findsOneWidget,
+        );
+        // The stale "skipped" copy must not leak through for this case.
+        expect(
+          find.text("This meal was skipped and can't be changed."),
+          findsNothing,
+        );
+
+        for (final key in ['action-snooze', 'action-swap', 'action-skip']) {
+          await tester.tap(find.byKey(ValueKey(key)), warnIfMissed: false);
+          await tester.pumpAndSettle();
+        }
+        expect(find.text("Can't snooze"), findsNothing);
+        expect(find.text("That can't be changed anymore."), findsNothing);
+      },
+    );
 
     testWidgets('today: snooze action opens SnoozeSheet for upcoming meal', (
       tester,
@@ -390,45 +624,59 @@ void main() {
       expect(find.text('FROM YOUR LIBRARY'), findsOneWidget);
     });
 
-    testWidgets('today: swap action on done meal toasts guard, no sheet', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      await openWithRouter(tester, date: today);
-      final day0 = await container.read(dayControllerProvider(today).future);
-      await container
-          .read(dayControllerProvider(today).notifier)
-          .markAllEaten(day0.meals.first.id);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('meal-actions')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('action-swap')));
-      await tester.pumpAndSettle();
-      expect(find.text("That can't be changed anymore."), findsOneWidget);
-      await tester.pump(const Duration(seconds: 5));
-    });
+    testWidgets(
+      'today: swap action on done meal is locked with a message, no sheet, no toast',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        await openWithRouter(tester, date: today);
+        final day0 = await container.read(dayControllerProvider(today).future);
+        await container
+            .read(dayControllerProvider(today).notifier)
+            .markAllEaten(day0.meals.first.id);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('meal-actions')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text("This meal is already logged and can't be changed."),
+          findsOneWidget,
+        );
+        await tester.tap(
+          find.byKey(const ValueKey('action-swap')),
+          warnIfMissed: false,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text("That can't be changed anymore."), findsNothing);
+      },
+    );
 
-    testWidgets('today: disabled snooze action on done meal toasts reason', (
-      tester,
-    ) async {
-      tester.view.physicalSize = const Size(800, 1600);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      await open(tester, date: today);
-      final day0 = await container.read(dayControllerProvider(today).future);
-      await container
-          .read(dayControllerProvider(today).notifier)
-          .markAllEaten(day0.meals.first.id);
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('meal-actions')));
-      await tester.pumpAndSettle();
-      await tester.tap(find.byKey(const ValueKey('action-snooze')));
-      await tester.pumpAndSettle();
-      expect(find.text('Meal is done'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 5));
-    });
+    testWidgets(
+      'today: disabled snooze action on done meal is locked with a message, no toast',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        await open(tester, date: today);
+        final day0 = await container.read(dayControllerProvider(today).future);
+        await container
+            .read(dayControllerProvider(today).notifier)
+            .markAllEaten(day0.meals.first.id);
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const ValueKey('meal-actions')));
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('action-snooze')),
+          warnIfMissed: false,
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Meal is done'), findsNothing);
+        expect(
+          find.text("This meal is already logged and can't be changed."),
+          findsOneWidget,
+        );
+      },
+    );
 
     // ── Meal gone ───────────────────────────────────────────────
 

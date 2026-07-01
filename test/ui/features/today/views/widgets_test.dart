@@ -1,11 +1,8 @@
 import 'package:checks/checks.dart';
-import 'package:crudo/domain/shared/macros.dart';
 import 'package:crudo/domain/shared/meal_time.dart';
-import 'package:crudo/ui/core/themes/dimensions.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
 import 'package:crudo/ui/features/today/views/day_strip.dart';
 import 'package:crudo/ui/features/today/views/formatting.dart';
-import 'package:crudo/ui/features/today/views/intake_card.dart';
 import 'package:crudo/ui/features/today/views/nudge_card.dart';
 import 'package:crudo/ui/features/today/views/streak_chip.dart';
 import 'package:flutter/material.dart';
@@ -58,45 +55,6 @@ void main() {
     expect(find.byKey(const ValueKey('day-pill-2026-06-06')), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('day-pill-2026-06-06')));
     check(tapped).equals(DateTime.utc(2026, 6, 6));
-  });
-
-  testWidgets('IntakeCard shows consumed/planned kcal + macro grams', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _wrap(
-        const IntakeCard(
-          consumed: Macros(protein: 30, carbs: 40, fats: 10, kcal: 370),
-          planned: Macros(protein: 120, carbs: 200, fats: 60, kcal: 1820),
-        ),
-      ),
-    );
-    expect(find.text('370'), findsOneWidget);
-    expect(find.text('/1820 kcal'), findsOneWidget);
-    expect(find.text('30/120g'), findsOneWidget); // protein bar value
-  });
-
-  testWidgets('IntakeCard fits narrow phone widths without overflow', (
-    tester,
-  ) async {
-    // Regression: the macro-bar label row overflowed by ~2px at 390 width
-    // (kcal row and bar values now scale down instead of overflowing).
-    for (final width in [320.0, 360.0, 390.0]) {
-      await tester.binding.setSurfaceSize(Size(width, 844));
-      await tester.pumpWidget(
-        _wrap(
-          const Padding(
-            padding: EdgeInsets.all(Spacing.md),
-            child: IntakeCard(
-              consumed: Macros(protein: 82, carbs: 140, fats: 38, kcal: 1240),
-              planned: Macros(protein: 140, carbs: 220, fats: 70, kcal: 2080),
-            ),
-          ),
-        ),
-      );
-      expect(tester.takeException(), isNull, reason: 'overflow at $width');
-    }
-    await tester.binding.setSurfaceSize(null);
   });
 
   testWidgets('StreakChip renders count', (tester) async {

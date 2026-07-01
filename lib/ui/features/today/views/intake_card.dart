@@ -149,34 +149,40 @@ class _MacroBar extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Flexible(
-                  child: Text(
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
                     label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
                     style: CrudoText.labelMd.copyWith(
                       color: colors.onSurfaceVar,
                     ),
                   ),
-                ),
-                const SizedBox(width: dim.Spacing.xs),
-                // The value scales down a hair when label+value exceed the
-                // bar column ('Protein' + '82/140g' is ~2px over at 390px).
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      '${v.round()}/${total.round()}g',
-                      style: CrudoText.labelMd.copyWith(
-                        color: colors.onSurface,
-                      ),
+                  const SizedBox(width: dim.Spacing.xs),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${v.round()}',
+                          style: CrudoText.labelMd.copyWith(
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        TextSpan(
+                          text: '/${total.round()}g',
+                          style: CrudoText.labelMd.copyWith(
+                            color: colors.onSurfaceMut,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: dim.Spacing.xs),
             ClipRRect(

@@ -7,11 +7,11 @@ import '../themes/colors.dart';
 import '../themes/dimensions.dart';
 import '../themes/typography.dart';
 
-/// A meal card: vertical status bar, meta row (time · meal type + status
-/// label), name, ingredient preview (first 3 + "+N more"), macros row
-/// (kcal bold, P/C/F muted), trailing 36px status circle. Status colors per
-/// design system: done=teal, partial=gold (split glyph, never "½"),
-/// upcoming=muted, skipped=red. No dividers — cards separate by spacing.
+/// A meal card: vertical status bar, meta row (time · meal type), name,
+/// fit-aware ingredient preview, macros row (kcal + colored P/C/F dots),
+/// trailing 36px status circle. Status colors per design system:
+/// done=teal, partial=gold (split glyph, never "½"), upcoming=muted,
+/// skipped=red. No dividers — cards separate by spacing.
 class MealCard extends StatelessWidget {
   const MealCard({
     required this.title,
@@ -39,8 +39,8 @@ class MealCard extends StatelessWidget {
   /// Derived meal totals; the card shows kcal + P/C/F grams rounded.
   final Macros macros;
 
-  /// Full ingredient name list; the card previews the first
-  /// [_previewCount] and collapses the rest into "+N more".
+  /// Full ingredient name list; the card previews as many names as fit on
+  /// one line and collapses the rest into "+N more".
   final List<String> ingredientNames;
   final MealStatus status;
   final VoidCallback? onTap;
@@ -50,21 +50,47 @@ class MealCard extends StatelessWidget {
   /// tap means for the current status.
   final VoidCallback? onStatusTap;
 
-  static const _previewCount = 3;
   static const _barHeight = 44.0; // component size, 4px grid
   static const _statusTapTarget = 44.0; // min touch target, 4px grid (§5)
 
-  /// "Eggs · Yogurt · Oats · +1 more" — first 3 names, rest collapsed.
-  String get ingredientPreview {
-    final shown = ingredientNames.take(_previewCount).join(' · ');
-    final more = ingredientNames.length - _previewCount;
-    return more > 0 ? '$shown · +$more more' : shown;
+  /// Largest [k] such that [names][0..k) joined by ` · ` (plus
+  /// ` · +N more` when [k] < [names].length) fits within [maxWidth] at
+  /// [style]. Always returns at least 1 when [names] is non-empty.
+  ///
+  /// Public so it can be unit-tested directly; the widget uses it via
+  /// [LayoutBuilder].
+  static int namesThatFit(
+    List<String> names,
+    double maxWidth,
+    TextStyle style,
+    TextScaler scaler,
+  ) {
+    if (names.isEmpty) return 0;
+    const separator = ' · ';
+    final painter = TextPainter(
+      textScaler: scaler,
+      textDirection: TextDirection.ltr,
+    );
+    for (var i = 1; i <= names.length; i++) {
+      final prefix = names.take(i).join(separator);
+      final text = i < names.length
+          ? '$prefix · +${names.length - i} more'
+          : prefix;
+      painter.text = TextSpan(text: text, style: style);
+      // Measure intrinsic width (no maxWidth) so we can tell whether the
+      // single-line preview would overflow the available space.
+      painter.layout();
+      if (painter.width > maxWidth) {
+        // Always show at least one name; let it ellipsize if necessary.
+        return i == 1 ? 1 : i - 1;
+      }
+    }
+    return names.length;
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).extension<CrudoColors>()!;
-    final statusColor = _statusLabelColor(colors);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -92,35 +118,25 @@ class MealCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text.rich(
-                          TextSpan(
-                            style: CrudoText.label.copyWith(
-                              color: colors.onSurfaceMut,
-                            ),
-                            children: [
-                              TextSpan(
-                                text: timeLabel,
-                                style: snoozedTimeLabel == null
-                                    ? null
-                                    : const TextStyle(
-                                        decoration: TextDecoration.lineThrough,
-                                      ),
-                              ),
-                              if (snoozedTimeLabel != null)
-                                TextSpan(text: '  $snoozedTimeLabel'),
-                              TextSpan(text: ' · $mealTypeLabel'),
-                            ],
-                          ),
+                  Text.rich(
+                    TextSpan(
+                      style: CrudoText.label.copyWith(
+                        color: colors.onSurfaceMut,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: timeLabel,
+                          style: snoozedTimeLabel == null
+                              ? null
+                              : const TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                ),
                         ),
-                      ),
-                      Text(
-                        status.name.toUpperCase(),
-                        style: CrudoText.label.copyWith(color: statusColor),
-                      ),
-                    ],
+                        if (snoozedTimeLabel != null)
+                          TextSpan(text: '  $snoozedTimeLabel'),
+                        TextSpan(text: ' · $mealTypeLabel'),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: Spacing.xs),
                   Text(
@@ -133,33 +149,57 @@ class MealCard extends StatelessWidget {
                   ),
                   if (ingredientNames.isNotEmpty) ...[
                     const SizedBox(height: Spacing.xs),
-                    Text(
-                      ingredientPreview,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: CrudoText.body.copyWith(
-                        color: colors.onSurfaceMut,
-                      ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final previewStyle = CrudoText.label.copyWith(
+                          color: colors.onSurfaceMut,
+                          fontWeight: FontWeight.w500,
+                        );
+                        final count = namesThatFit(
+                          ingredientNames,
+                          constraints.maxWidth,
+                          previewStyle,
+                          MediaQuery.textScalerOf(context),
+                        );
+                        final shown = ingredientNames.take(count).join(' · ');
+                        final more = ingredientNames.length - count;
+                        final text = more > 0 ? '$shown · +$more more' : shown;
+                        return Text(
+                          text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: previewStyle,
+                        );
+                      },
                     ),
                   ],
                   const SizedBox(height: Spacing.sm),
-                  Row(
+                  Wrap(
+                    spacing: Spacing.sm,
+                    runSpacing: Spacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Text(
-                        '${macros.kcal.round()} kcal',
-                        style: CrudoText.body.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w700,
+                      Padding(
+                        padding: const EdgeInsets.only(right: Spacing.md),
+                        child: Text(
+                          '${macros.kcal.round()} kcal',
+                          style: CrudoText.labelMd.copyWith(
+                            color: colors.onSurface,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: Spacing.md),
-                      Text(
-                        'P ${macros.protein.round()}g'
-                        '  C ${macros.carbs.round()}g'
-                        '  F ${macros.fats.round()}g',
-                        style: CrudoText.body.copyWith(
-                          color: colors.onSurfaceMut,
-                        ),
+                      _MacroChip(
+                        grams: macros.protein.round(),
+                        color: colors.proteinColor,
+                      ),
+                      _MacroChip(
+                        grams: macros.carbs.round(),
+                        color: colors.carbsColor,
+                      ),
+                      _MacroChip(
+                        grams: macros.fats.round(),
+                        color: colors.fatsColor,
                       ),
                     ],
                   ),
@@ -195,14 +235,6 @@ class MealCard extends StatelessWidget {
     );
   }
 
-  Color _statusLabelColor(CrudoColors colors) => switch (status) {
-    MealStatus.done => colors.primary,
-    MealStatus.partial => colors.goldDeep,
-    MealStatus.upcoming => colors.onSurfaceMut,
-    MealStatus.overdue => colors.overdue,
-    MealStatus.skipped => colors.error,
-  };
-
   Color _barColor(CrudoColors colors) => switch (status) {
     MealStatus.done => colors.primarySoft,
     MealStatus.partial => colors.gold,
@@ -210,6 +242,34 @@ class MealCard extends StatelessWidget {
     MealStatus.overdue => colors.overdue,
     MealStatus.skipped => colors.error.withValues(alpha: 0.4),
   };
+}
+
+/// Small colored dot + grams label for a single macro.
+class _MacroChip extends StatelessWidget {
+  const _MacroChip({required this.grams, required this.color});
+
+  final int grams;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CrudoColors>()!;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: Spacing.xs,
+          height: Spacing.xs,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: Spacing.xs),
+        Text(
+          '${grams}g',
+          style: CrudoText.labelMd.copyWith(color: colors.onSurfaceMut),
+        ),
+      ],
+    );
+  }
 }
 
 /// 36px trailing status circle: done=filled teal check, partial=gold
@@ -229,7 +289,7 @@ class _StatusCircle extends StatelessWidget {
       MealStatus.done => (
         colors.primary,
         null,
-        Icon(Icons.check, size: IconSizes.md, color: colors.surfaceLowest),
+        Icon(Icons.check, size: IconSizes.sm, color: colors.surfaceLowest),
       ),
       MealStatus.partial => (
         colors.gold,

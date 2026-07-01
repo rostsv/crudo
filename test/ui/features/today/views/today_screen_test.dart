@@ -350,7 +350,9 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('OVERDUE'), findsOneWidget);
+      // Status text removed; the overdue state is conveyed by the circle.
+      expect(find.text('OVERDUE'), findsNothing);
+      expect(find.byKey(const ValueKey('meal-status-overdue')), findsOneWidget);
       // The card's time row is a Text.rich — match the span, not a Text widget.
       expect(
         find.textContaining('16:15', findRichText: true),

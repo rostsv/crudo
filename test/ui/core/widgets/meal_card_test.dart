@@ -2,7 +2,9 @@ import 'package:checks/checks.dart';
 import 'package:crudo/domain/shared/enums.dart';
 import 'package:crudo/domain/shared/macros.dart';
 import 'package:crudo/ui/core/themes/colors.dart';
+import 'package:crudo/ui/core/themes/dimensions.dart';
 import 'package:crudo/ui/core/themes/theme.dart';
+import 'package:crudo/ui/core/themes/typography.dart';
 import 'package:crudo/ui/core/widgets/meal_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -31,17 +33,48 @@ MealCard _card({
 );
 
 void main() {
-  testWidgets('shows every field for every status without "½" text', (
+  group('namesThatFit', () {
+    final style = CrudoText.labelMd.copyWith(
+      color: CrudoColors.light.onSurfaceMut,
+    );
+    const scaler = TextScaler.noScaling;
+
+    test('empty list returns 0', () {
+      check(MealCard.namesThatFit([], 100, style, scaler)).equals(0);
+    });
+
+    test('single long name returns 1 even though it overflows', () {
+      check(
+        MealCard.namesThatFit(['Averylongingredientname'], 10, style, scaler),
+      ).equals(1);
+    });
+
+    test('several short names all fit in a wide width', () {
+      check(
+        MealCard.namesThatFit(['A', 'B', 'C', 'D'], 1000, style, scaler),
+      ).equals(4);
+    });
+
+    test('many names collapse into "+N more" at a narrow width', () {
+      final count = MealCard.namesThatFit(
+        ['A', 'B', 'C', 'D', 'E'],
+        40,
+        style,
+        scaler,
+      );
+      check(count).equals(1);
+    });
+  });
+
+  testWidgets('shows every field for every status without status text', (
     tester,
   ) async {
     for (final status in MealStatus.values) {
       await tester.pumpWidget(_wrap(_card(status: status)));
       expect(find.text('Protein Bowl'), findsOneWidget);
       expect(find.text('08:00 · Breakfast'), findsOneWidget);
-      expect(find.text(status.name.toUpperCase()), findsOneWidget);
-      expect(find.text('Eggs · Yogurt · Oats · +1 more'), findsOneWidget);
+      expect(find.text(status.name.toUpperCase()), findsNothing);
       expect(find.text('420 kcal'), findsOneWidget);
-      expect(find.text('P 32g  C 45g  F 12g'), findsOneWidget);
       expect(find.textContaining('½'), findsNothing);
       expect(
         find.byKey(ValueKey('meal-status-${status.name}')),
@@ -50,14 +83,80 @@ void main() {
     }
   });
 
-  testWidgets('ingredient preview collapses past the first three', (
+  testWidgets('macros row shows colored dots + grams for P/C/F', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      _wrap(_card(ingredientNames: const ['A', 'B', 'C', 'D', 'E'])),
-    );
-    final card = tester.widget<MealCard>(find.byType(MealCard));
-    check(card.ingredientPreview).equals('A · B · C · +2 more');
+    await tester.pumpWidget(_wrap(_card()));
+
+    expect(find.text('420 kcal'), findsOneWidget);
+    expect(find.text('32g'), findsOneWidget);
+    expect(find.text('45g'), findsOneWidget);
+    expect(find.text('12g'), findsOneWidget);
+
+    final dotContainers = tester
+        .widgetList<Container>(find.byType(Container))
+        .where(
+          (c) =>
+              c.constraints != null &&
+              c.constraints!.minWidth == Spacing.xs &&
+              c.constraints!.minHeight == Spacing.xs &&
+              c.decoration is BoxDecoration &&
+              (c.decoration as BoxDecoration).shape == BoxShape.circle,
+        )
+        .toList();
+    check(dotContainers).length.equals(3);
+
+    final dotColors = dotContainers
+        .map((c) => (c.decoration as BoxDecoration).color)
+        .toList();
+    check(dotColors[0]).equals(CrudoColors.light.proteinColor);
+    check(dotColors[1]).equals(CrudoColors.light.carbsColor);
+    check(dotColors[2]).equals(CrudoColors.light.fatsColor);
+  });
+
+  testWidgets('kcal label uses labelMd size', (tester) async {
+    await tester.pumpWidget(_wrap(_card()));
+    final kcalText = tester.widget<Text>(find.text('420 kcal'));
+    check(kcalText.style!.fontSize).equals(12);
+  });
+
+  testWidgets('ingredient preview is small and not bold', (tester) async {
+    await tester.pumpWidget(_wrap(_card()));
+    final preview = tester.widget<Text>(find.textContaining('Eggs'));
+    check(preview.style!.fontSize).equals(10);
+    check(preview.style!.fontWeight).equals(FontWeight.w500);
+  });
+
+  testWidgets('ingredient preview shows more names at wider widths', (
+    tester,
+  ) async {
+    const names = [
+      'Chicken',
+      'Rice',
+      'Avocado',
+      'Spinach',
+      'Oil',
+      'Tomatoes',
+      'Feta',
+      'Lemon',
+    ];
+    const narrowWidth = 320.0;
+    const wideWidth = 600.0;
+
+    await tester.binding.setSurfaceSize(const Size(narrowWidth, 844));
+    await tester.pumpWidget(_wrap(_card(ingredientNames: names)));
+    final narrowText = tester.widget<Text>(find.textContaining('+'));
+    final narrowMore = RegExp(r'\+(\d+) more').firstMatch(narrowText.data!)!;
+
+    await tester.binding.setSurfaceSize(const Size(wideWidth, 844));
+    await tester.pumpWidget(_wrap(_card(ingredientNames: names)));
+    final wideText = tester.widget<Text>(find.textContaining('+'));
+    final wideMore = RegExp(r'\+(\d+) more').firstMatch(wideText.data!)!;
+
+    check(
+      int.parse(wideMore.group(1)!),
+    ).isLessThan(int.parse(narrowMore.group(1)!));
+    await tester.binding.setSurfaceSize(null);
   });
 
   testWidgets('short ingredient list shows no "+N more" suffix', (
@@ -71,9 +170,8 @@ void main() {
   testWidgets('empty ingredient list hides the preview line', (tester) async {
     await tester.pumpWidget(_wrap(_card(ingredientNames: const [])));
     expect(find.text('Protein Bowl'), findsOneWidget);
-    expect(find.textContaining('·  ·'), findsNothing);
-    final card = tester.widget<MealCard>(find.byType(MealCard));
-    check(card.ingredientPreview).equals('');
+    // Only the time label contains a separator; no ingredient preview line.
+    expect(find.textContaining('·'), findsOneWidget);
   });
 
   testWidgets('tap fires when provided', (tester) async {
@@ -124,12 +222,11 @@ void main() {
     check(done.label).equals('Undo Protein Bowl');
   });
 
-  testWidgets('overdue: amber label + clock icon on amber-soft circle; '
-      'title not muted', (tester) async {
+  testWidgets('overdue: clock icon on amber-soft circle; title not muted', (
+    tester,
+  ) async {
     await tester.pumpWidget(_wrap(_card(status: MealStatus.overdue)));
-    expect(find.text('OVERDUE'), findsOneWidget);
-    final label = tester.widget<Text>(find.text('OVERDUE'));
-    check(label.style!.color).equals(CrudoColors.light.overdue);
+    expect(find.text('OVERDUE'), findsNothing);
     final icon = tester.widget<Icon>(find.byIcon(Icons.schedule));
     check(icon.color).equals(CrudoColors.light.overdue);
     final title = tester.widget<Text>(find.text('Protein Bowl'));

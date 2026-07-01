@@ -4,11 +4,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../data/services/id_generator.dart';
 import '../../../../domain/services/plan_scheduling.dart';
-import '../../../../domain/shared/macros.dart';
 import '../../../core/formatting.dart';
 import '../../../core/themes/colors.dart';
 import '../../../core/themes/dimensions.dart';
 import '../../../core/themes/typography.dart';
+import '../../../core/widgets/macro_total_card.dart';
 import '../../../core/widgets/sheet.dart';
 import '../../../core/widgets/sheet_actions.dart';
 import '../../../core/widgets/toast.dart';
@@ -17,10 +17,10 @@ import '../view_models/plan_detail_controller.dart';
 import '../view_models/plan_draft.dart';
 import '../view_models/plans_list.dart';
 
-/// Read-only plan detail viewer. `LIBRARY`-style `PLAN` eyebrow + name, a
-/// gradient daily-target hero, the read-only weekday strip with an `EDIT` link,
-/// and the time-ordered meal slots. Mutating actions live behind the `···`
-/// menu (edit / duplicate / delete); pause/resume lives inside the editor.
+/// Read-only plan detail viewer. `PLAN` eyebrow + name, a gradient daily-target
+/// hero (kcal + macros + repeating-weekday footer), and the time-ordered meal
+/// slots. Mutating actions live behind the `···` menu (edit / duplicate /
+/// delete); pause/resume lives inside the editor.
 class PlanViewScreen extends ConsumerWidget {
   const PlanViewScreen({required this.planId, super.key});
 
@@ -102,30 +102,13 @@ class PlanViewScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DailyTargetHero(total: view.total, colors: colors),
-                    const SizedBox(height: Spacing.lg),
-
-                    // Repeats on + EDIT link.
-                    Row(
-                      children: [
-                        const Text('REPEATS ON', style: CrudoText.label),
-                        const Spacer(),
-                        GestureDetector(
-                          key: const ValueKey('plan-edit-link'),
-                          onTap: () => context.push('/plans/$planId/edit'),
-                          behavior: HitTestBehavior.opaque,
-                          child: Text(
-                            'EDIT',
-                            style: CrudoText.label.copyWith(
-                              color: colors.primary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
+                    // Daily-target hero with the repeating weekdays as footer.
+                    MacroTotalCard(
+                      macros: view.total,
+                      label: 'DAILY TARGET',
+                      gradient: true,
+                      footer: _HeroWeekStrip(days: view.days, colors: colors),
                     ),
-                    const SizedBox(height: Spacing.sm),
-                    _ReadonlyWeekStrip(days: view.days, colors: colors),
                     const SizedBox(height: Spacing.lg),
 
                     // Meal slots header.
@@ -158,7 +141,10 @@ class PlanViewScreen extends ConsumerWidget {
                             slot: s,
                             zebra: i.isOdd,
                             colors: colors,
-                            onTap: () => context.push('/plans/$planId/edit'),
+                            onTap: () => showCrudoSheet<void>(
+                              context,
+                              builder: (_) => PlanSlotSheet(slot: s),
+                            ),
                           ),
                         ),
                   ],
@@ -172,32 +158,39 @@ class PlanViewScreen extends ConsumerWidget {
   }
 
   Future<void> _showActions(BuildContext context, WidgetRef ref) async {
+    final allPlans = ref.read(planTemplatesProvider).value ?? const [];
+    final canDelete = canDeletePlan(allPlans);
     final action = await showCrudoSheet<String>(
       context,
       builder: (sheetCtx) => SheetScaffold(
         title: 'Plan actions',
         body: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SecondaryAction(
+            SheetActionRow(
+              icon: Icons.edit_outlined,
               label: 'Edit',
               onTap: () => Navigator.of(sheetCtx).pop('edit'),
             ),
-            const SizedBox(height: Spacing.sm),
-            SecondaryAction(
+            SheetActionRow(
+              icon: Icons.content_copy_outlined,
               label: 'Duplicate',
               onTap: () => Navigator.of(sheetCtx).pop('duplicate'),
             ),
-            const SizedBox(height: Spacing.sm),
-            SecondaryAction(
+            SheetActionRow(
+              icon: Icons.delete_outline,
               label: 'Delete plan',
+              enabled: canDelete,
               onTap: () => Navigator.of(sheetCtx).pop('delete'),
+              onDisabledTap: () => showCrudoToast(
+                sheetCtx,
+                "Can't delete your only plan",
+                body: 'Create another plan before deleting this one.',
+                kind: ToastKind.warn,
+              ),
             ),
           ],
-        ),
-        cta: SecondaryAction(
-          label: 'Cancel',
-          onTap: () => Navigator.of(sheetCtx).pop(),
         ),
       ),
     );
@@ -273,129 +266,10 @@ class PlanViewScreen extends ConsumerWidget {
   }
 }
 
-/// Gradient daily-target hero: kcal headline + P/C/F with underline accents.
-class _DailyTargetHero extends StatelessWidget {
-  const _DailyTargetHero({required this.total, required this.colors});
-
-  final Macros total;
-  final CrudoColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(Spacing.lg),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [CrudoPalette.primary, CrudoPalette.primarySoft],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: Radii.all(Radii.lg),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'DAILY TARGET',
-            style: CrudoText.label.copyWith(
-              color: colors.surfaceLowest.withValues(alpha: 0.7),
-            ),
-          ),
-          const SizedBox(height: Spacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                '${total.kcal.round()}',
-                style: CrudoText.display.copyWith(color: colors.surfaceLowest),
-              ),
-              const SizedBox(width: Spacing.sm),
-              Text(
-                'kcal',
-                style: CrudoText.body.copyWith(
-                  color: colors.surfaceLowest.withValues(alpha: 0.7),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: Spacing.lg),
-          Row(
-            children: [
-              _HeroMacro(
-                label: 'PROTEIN',
-                grams: total.protein,
-                colors: colors,
-              ),
-              _HeroMacro(label: 'CARBS', grams: total.carbs, colors: colors),
-              _HeroMacro(label: 'FATS', grams: total.fats, colors: colors),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _HeroMacro extends StatelessWidget {
-  const _HeroMacro({
-    required this.label,
-    required this.grams,
-    required this.colors,
-  });
-
-  final String label;
-  final double grams;
-  final CrudoColors colors;
-
-  @override
-  Widget build(BuildContext context) {
-    final onHero = colors.surfaceLowest;
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: CrudoText.label.copyWith(
-              color: onHero.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: Spacing.xs),
-          Text.rich(
-            TextSpan(
-              style: CrudoText.title.copyWith(color: onHero),
-              children: [
-                TextSpan(text: '${grams.round()}'),
-                TextSpan(
-                  text: 'g',
-                  style: CrudoText.labelMd.copyWith(
-                    color: onHero.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Spacing.sm),
-          // Underline accent (painted stroke, allowed off-grid).
-          Container(
-            height: 2,
-            width: Spacing.xl,
-            decoration: BoxDecoration(
-              color: onHero.withValues(alpha: 0.4),
-              borderRadius: Radii.all(Radii.full),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Read-only full-width weekday strip.
-class _ReadonlyWeekStrip extends StatelessWidget {
-  const _ReadonlyWeekStrip({required this.days, required this.colors});
+/// Repeating-weekday strip for the gradient hero footer. Active days are solid
+/// white chips; the rest are faint white-alpha.
+class _HeroWeekStrip extends StatelessWidget {
+  const _HeroWeekStrip({required this.days, required this.colors});
 
   final List<int> days;
   final CrudoColors colors;
@@ -404,32 +278,45 @@ class _ReadonlyWeekStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    final onHero = colors.surfaceLowest;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        for (var i = 0; i < 7; i++) ...[
-          if (i > 0) const SizedBox(width: Spacing.xs),
-          Expanded(
-            child: SizedBox(
-              height: 36, // chip height (width > height), 4px grid
-              child: Container(
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: days.contains(i) ? colors.primary : colors.surfaceHigh,
-                  borderRadius: Radii.all(Radii.sm),
-                ),
-                child: Text(
-                  _labels[i],
-                  style: CrudoText.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: days.contains(i)
-                        ? colors.surfaceLowest
-                        : colors.onSurfaceMut,
+        Text(
+          'REPEATS ON',
+          style: CrudoText.label.copyWith(color: onHero.withValues(alpha: 0.7)),
+        ),
+        const SizedBox(height: Spacing.sm),
+        Row(
+          children: [
+            for (var i = 0; i < 7; i++) ...[
+              if (i > 0) const SizedBox(width: Spacing.xs),
+              Expanded(
+                child: SizedBox(
+                  height: 32, // chip height (width > height), 4px grid
+                  child: Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: days.contains(i)
+                          ? onHero
+                          : onHero.withValues(alpha: 0.16),
+                      borderRadius: Radii.all(Radii.sm),
+                    ),
+                    child: Text(
+                      _labels[i],
+                      style: CrudoText.labelMd.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: days.contains(i)
+                            ? colors.primary
+                            : onHero.withValues(alpha: 0.7),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+            ],
+          ],
+        ),
       ],
     );
   }
@@ -452,9 +339,10 @@ class _SlotRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final kcal = slot.macros.kcal.round();
     final subtitle = slot.tag.isEmpty
-        ? '${slot.kcal} kcal'
-        : '${slot.tag} · ${slot.kcal} kcal';
+        ? '$kcal kcal'
+        : '${slot.tag} · $kcal kcal';
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -509,6 +397,81 @@ class _SlotRow extends StatelessWidget {
               Icons.chevron_right,
               size: IconSizes.md,
               color: colors.onSurfaceVar,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Read-only bottom sheet for one plan slot — a plain recipe: time + name
+/// header, an ingredient list (name · grams · kcal), and a total summary
+/// (kcal + macros) at the bottom. Opened by tapping a slot row; the plan
+/// itself is edited only from the ··· actions menu.
+class PlanSlotSheet extends StatelessWidget {
+  const PlanSlotSheet({required this.slot, super.key});
+
+  final PlanSlotView slot;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CrudoColors>()!;
+    final time = mealTimeLabel(slot.time);
+    final m = slot.macros;
+    return SheetScaffold(
+      label: slot.tag.isEmpty ? time : '$time · ${slot.tag}',
+      title: slot.mealName,
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final ing in slot.ingredients)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.md),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        ing.name,
+                        style: CrudoText.body.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colors.onSurface,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: Spacing.sm),
+                    Text(
+                      '${ing.grams.round()}g · ${ing.kcal.round()} kcal',
+                      style: CrudoText.labelMd.copyWith(
+                        color: colors.onSurfaceMut,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // Total summary: kcal + total macros.
+            const SizedBox(height: Spacing.xs),
+            Row(
+              children: [
+                Text(
+                  'Total',
+                  style: CrudoText.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  '${m.kcal.round()} kcal',
+                  style: CrudoText.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ],
             ),
           ],
         ),

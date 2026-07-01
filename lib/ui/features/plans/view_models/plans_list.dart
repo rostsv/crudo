@@ -1,4 +1,5 @@
 import 'package:crudo/domain/food/food.dart';
+import 'package:crudo/domain/food/food_ref.dart';
 import 'package:crudo/domain/meal/meal_template.dart';
 import 'package:crudo/domain/plan/plan_template.dart';
 import 'package:crudo/domain/services/nutrition.dart'; // mealTemplateMacros
@@ -91,11 +92,21 @@ PlanViewVm planView(Ref ref, String planId) {
         final tag = mt == null || mt.tags.isEmpty
             ? ''
             : mt.tags.map((t) => mealTagLabels[t]).join(' · ');
+        final ingredients = <PlanIngredientView>[
+          for (final ref in mt?.foods ?? const <FoodRef>[])
+            if (foods[ref.foodId] case final food?)
+              (
+                name: food.name,
+                grams: ref.grams.value,
+                kcal: macrosForFood(food, ref.grams.value).kcal,
+              ),
+        ];
         return (
           time: s.time,
           mealName: mt?.name ?? 'Unknown meal',
           tag: tag,
-          kcal: macros.kcal.round(),
+          macros: macros,
+          ingredients: ingredients,
         );
       }(),
   ]..sort((a, b) => a.time.compareTo(b.time));

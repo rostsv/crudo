@@ -30,6 +30,59 @@ Future<void> runDayOp(
   }
 }
 
+/// A single tappable action row in a sheet body: primary-colored icon + bold
+/// label. Disabled rows render at [Opacities.disabled]; taps then route to
+/// [onDisabledTap] (e.g. an explanatory toast). Shared by the meal-actions and
+/// plan-actions sheets so both read identically.
+class SheetActionRow extends StatelessWidget {
+  const SheetActionRow({
+    required this.icon,
+    required this.label,
+    this.enabled = true,
+    this.onTap,
+    this.onDisabledTap,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool enabled;
+  final VoidCallback? onTap;
+  final VoidCallback? onDisabledTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).extension<CrudoColors>()!;
+    return Opacity(
+      opacity: enabled ? 1 : Opacities.disabled,
+      child: Semantics(
+        button: enabled && onTap != null,
+        label: label,
+        child: GestureDetector(
+          onTap: enabled ? onTap : onDisabledTap,
+          behavior: HitTestBehavior.opaque,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+            child: Row(
+              children: [
+                Icon(icon, size: IconSizes.md, color: colors.primary),
+                const SizedBox(width: Spacing.md),
+                Text(
+                  label,
+                  style: CrudoText.body.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Tonal pill action for sheet footers (Skip / Snooze / Cancel) — the
 /// secondary counterpart to PrimaryCta.
 class SecondaryAction extends StatelessWidget {

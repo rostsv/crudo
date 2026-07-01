@@ -34,8 +34,19 @@ typedef PlanRowVm = ({
   bool isToday,
 });
 
-/// One resolved slot in the read-only plan viewer: time · name · tag · kcal.
-typedef PlanSlotView = ({MealTime time, String mealName, String tag, int kcal});
+/// One resolved ingredient inside a plan slot (for the slot detail sheet):
+/// name + grams + kcal.
+typedef PlanIngredientView = ({String name, double grams, double kcal});
+
+/// One resolved slot in the read-only plan viewer: time · name · tag · macros,
+/// plus the resolved ingredient list for the slot detail sheet.
+typedef PlanSlotView = ({
+  MealTime time,
+  String mealName,
+  String tag,
+  Macros macros,
+  List<PlanIngredientView> ingredients,
+});
 
 /// Read-only detail data for the plan viewer screen. `total` feeds the
 /// daily-target hero; `slots` are time-ordered.

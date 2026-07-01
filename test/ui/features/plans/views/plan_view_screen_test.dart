@@ -23,13 +23,17 @@ void main() {
         time: const MealTime(480),
         mealName: 'Protein Bowl',
         tag: 'Breakfast',
-        kcal: 554,
+        macros: const Macros(protein: 40, carbs: 30, fats: 20, kcal: 554),
+        ingredients: const <PlanIngredientView>[
+          (name: 'Oats', grams: 80, kcal: 300),
+        ],
       ),
       (
         time: const MealTime(750),
         mealName: 'Quinoa Salad',
         tag: 'Lunch',
-        kcal: 594,
+        macros: const Macros(protein: 30, carbs: 60, fats: 18, kcal: 594),
+        ingredients: const <PlanIngredientView>[],
       ),
     ],
   );
@@ -72,13 +76,43 @@ void main() {
     expect(find.text('Quinoa Salad'), findsOneWidget);
   });
 
-  testWidgets('EDIT link navigates to the editor', (tester) async {
+  testWidgets('··· Edit action navigates to the editor', (tester) async {
     await pumpViewer(tester, view: vm);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byKey(const ValueKey('plan-edit-link')));
+    await tester.tap(find.byKey(const ValueKey('plan-actions')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit'));
     await tester.pumpAndSettle();
 
     expect(find.text('Editor A'), findsOneWidget);
+  });
+
+  testWidgets('actions sheet has no Cancel button', (tester) async {
+    await pumpViewer(tester, view: vm);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('plan-actions')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit'), findsOneWidget);
+    expect(find.text('Duplicate'), findsOneWidget);
+    expect(find.text('Delete plan'), findsOneWidget);
+    expect(find.text('Cancel'), findsNothing);
+  });
+
+  testWidgets('tapping a slot opens the slot sheet, not the editor', (
+    tester,
+  ) async {
+    await pumpViewer(tester, view: vm);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Protein Bowl'));
+    await tester.pumpAndSettle();
+
+    // Recipe-style slot sheet, not the editor.
+    expect(find.text('Oats'), findsOneWidget);
+    expect(find.text('Total'), findsOneWidget);
+    expect(find.text('Editor A'), findsNothing);
   });
 }

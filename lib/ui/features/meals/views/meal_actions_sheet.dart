@@ -55,12 +55,11 @@ class MealActionsSheet extends ConsumerWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _ActionRow(
+          SheetActionRow(
             key: const ValueKey('action-snooze'),
             icon: Icons.snooze_outlined,
             label: 'Snooze',
             enabled: !locked && canSnoozeMeal(day, mealId, now, today),
-            colors: colors,
             onTap: () => showCrudoSheet<void>(
               context,
               builder: (_) => SnoozeSheet(date: date, mealId: mealId),
@@ -86,12 +85,11 @@ class MealActionsSheet extends ConsumerWidget {
                     }
                   },
           ),
-          _ActionRow(
+          SheetActionRow(
             key: const ValueKey('action-swap'),
             icon: Icons.swap_horiz,
             label: 'Swap meal',
             enabled: canEdit,
-            colors: colors,
             onTap: () => showCrudoSheet<void>(
               context,
               builder: (_) => SwapSheet(date: date, mealId: mealId),
@@ -105,12 +103,11 @@ class MealActionsSheet extends ConsumerWidget {
                     kind: ToastKind.warn,
                   ),
           ),
-          _ActionRow(
+          SheetActionRow(
             key: const ValueKey('action-skip'),
             icon: Icons.skip_next,
             label: 'Skip',
             enabled: !locked && canSkipMeal(day, mealId, today),
-            colors: colors,
             onTap: () => _skip(context, ref),
             onDisabledTap: locked
                 ? null
@@ -155,55 +152,5 @@ class MealActionsSheet extends ConsumerWidget {
       navigator.pop();
       navigator.pop();
     }, guardMessage: _guardMessage);
-  }
-}
-
-class _ActionRow extends StatelessWidget {
-  const _ActionRow({
-    required this.icon,
-    required this.label,
-    required this.enabled,
-    required this.colors,
-    this.onTap,
-    this.onDisabledTap,
-    super.key,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool enabled;
-  final CrudoColors colors;
-  final VoidCallback? onTap;
-  final VoidCallback? onDisabledTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: enabled ? 1 : Opacities.disabled,
-      child: Semantics(
-        button: enabled && onTap != null,
-        label: label,
-        child: GestureDetector(
-          onTap: enabled ? onTap : onDisabledTap,
-          behavior: HitTestBehavior.opaque,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-            child: Row(
-              children: [
-                Icon(icon, size: IconSizes.md, color: colors.primary),
-                const SizedBox(width: Spacing.md),
-                Text(
-                  label,
-                  style: CrudoText.body.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colors.onSurface,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 }

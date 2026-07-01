@@ -126,7 +126,7 @@ final class PlanViewProvider
   }
 }
 
-String _$planViewHash() => r'9ec28fcd0eb8badd8f2c6e38091fa85128e24801';
+String _$planViewHash() => r'59050bb9f66b522736e15be153a030de9b250a43';
 
 /// Read-only detail data for one plan (the viewer screen). Resolves each slot's
 /// meal name, tag label, and kcal; totals feed the daily-target hero. Throws a

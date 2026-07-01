@@ -52,14 +52,14 @@ Status legend: ✅ done · ◻ not started.
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| S14 | Notifications | logic+ui | S05,S09 | local scheduling (pre/at/eod/risk), Ate-it/Snooze/Skip actions. |
-| S15 | Profile & settings | ui | S03,S12 | units, goal, threshold, notif toggles, subscription status, sign out. |
+| ✅ | Notifications (S14) | logic+ui | S05,S09 | Done `4551f04` (574 green). Pure `notificationSchedule` (pre/at/eod/risk) + `flutter_local_notifications` adapter + streak-at-risk sheet. Review caught 3 bugs incl. a bootstrap launch-crash hidden behind green tests. Spec+plan: `2026-06-12-s14-*`. |
+| ✅ | Profile & settings (S15) | ui | S03,S12 | Done `2b8be9b` (609 green). Profile tab + per-setting sheets (units, goal, threshold) + `RemindersSheet` (4 notif toggles), subscription status, sign out. Review caught missing Task 7 — S14 read profile non-reactively so prefs edits were inert. Spec+plan: `2026-06-15-s15-*`. |
 
 ## Phase 6 — Onboarding
 
 | Spec | Title | Kind | Depends on | Notes |
 |---|---|---|---|---|
-| S16 | Onboarding — value funnel | ui | S04 | screens 1–6: welcome, pain, demo video, transformation, attribution. |
+| ✅ | Onboarding — value funnel (S16) | ui | S04 | Done `971f1e5` (626 green). 7-screen value funnel in a `PageView` at dev-reachable `/onboarding` (welcome, pain, demo, transformation, attribution): no entry gate yet → S18. Review caught real drift (fontSize/Border) hidden behind green tests. Spec+plan: `2026-06-22-s16-*`. |
 | S17 | Onboarding — setup builds first plan | ui | S08,S11 | screens 7–10: goal, meal count, timing, reminders → constructs first Plan. |
 | S18 | Onboarding — interactive demo | ui | S05,S06 | screen 11: tap-mark sample meal, streak ticks. (12–13 sign-up/verify → S22.) |
 
